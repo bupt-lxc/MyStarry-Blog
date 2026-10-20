@@ -34,6 +34,8 @@ Files: `deployment/package_release.py`, `.github/workflows/deploy.yml`, `deploym
 
 - [x] Generate ignored local key; install public key and publisher over existing authenticated SSH; test forced check and rejected shell/forwarding. Store private key using `gh secret set ... --body-file` or stdin, never print it. Configure repository variables through structured gh arguments/files.
 - [x] Capture other containers/Nginx fingerprint and existing DB logical snapshot; create a temporary acceptance marker if needed without deleting or changing existing user data.
-- [ ] Run Node/Python tests, typecheck/build and workflow validation; commit and push to master under the user's explicit auto-deploy authorization.
-- [ ] Follow actual Actions run to completion; fix and retry if necessary. Verify public deployment.json equals pushed commit, healthy app/web, public pages/API, marker persistence, original records unchanged, original containers/start times/Nginx unchanged. Delete only our temporary marker through admin API.
-- [ ] Update plan and verification record, ensure clean Git and no secret leakage, report workflow link, trigger behavior and data-preservation result.
+- [x] Run Node/Python tests, typecheck/build and workflow validation; commit and push to master under the user's explicit auto-deploy authorization.
+- [x] Follow actual Actions run to completion; fix and retry if necessary. Verify public deployment.json equals pushed commit, healthy app/web, public pages/API, marker persistence, original records unchanged, original containers/start times/Nginx unchanged. Delete only our temporary marker through admin API.
+- [x] Update plan and verification record, verify secret exclusion, commit documentation and check the resulting master deployment before final handoff.
+
+Evidence: [automatic-deployment-verification](2026-10-21-automatic-deployment-verification.md). The first successful master deployment is Actions run 39463007867; the documentation push provides a second ordinary push acceptance.
