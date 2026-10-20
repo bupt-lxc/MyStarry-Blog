@@ -1,7 +1,6 @@
 import { defineConfig, fontProviders } from "astro/config";
 import sitemap from "@astrojs/sitemap";
-import netlify from "@astrojs/netlify";
-import { cacheNetlify } from "@astrojs/netlify/cache";
+import { existsSync } from "node:fs";
 import robotsTxt from "astro-robots-txt";
 import UnoCSS from "@unocss/astro";
 import icon from "astro-icon";
@@ -13,7 +12,8 @@ import svelte from "@astrojs/svelte";
 
 import { unified } from "@astrojs/markdown-remark";
 
-const envSiteUrl = process.env.SITE_URL ?? "https://gianmarcocavallo.com/";
+if (existsSync(".env")) process.loadEnvFile(".env");
+const envSiteUrl = process.env.SITE_URL ?? process.env.PUBLIC_SITE_URL ?? "http://localhost:4321/";
 const site = envSiteUrl.endsWith("/") ? envSiteUrl : `${envSiteUrl}/`;
 const siteNoTrailingSlash = site.endsWith("/") ? site.slice(0, -1) : site;
 
@@ -81,11 +81,7 @@ export default defineConfig({
     prefetchAll: true,
     defaultStrategy: "hover",
   },
-  output: "server",
-  adapter: netlify({ middlewareMode: "edge" }),
-  cache: {
-    provider: cacheNetlify(),
-  },
+  output: "static",
   vite: {
     assetsInclude: "**/*.riv",
   },

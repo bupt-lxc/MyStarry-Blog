@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# local code index and deployment archives
+.codegraph/
+deployment/*.tar.gz

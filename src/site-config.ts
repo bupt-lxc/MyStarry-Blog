@@ -1,9 +1,10 @@
-export const DOMAIN = "gianmarcocavallo.com";
+const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "http://localhost:4321/";
+export const DOMAIN = new URL(siteUrl).host;
 
 export const SITE = {
   site: {
     domain: DOMAIN,
-    url: `https://${DOMAIN}/`,
+    url: siteUrl,
   },
   author: {
     firstName: "Gianmarco",
@@ -25,7 +26,7 @@ export const SITE = {
     medium: "https://ladvace.medium.com/",
     dribbble: "https://dribbble.com/Ladvace_Jace",
     behance: "https://www.behance.net/Ladvace",
-    email: `contact@${DOMAIN}`,
+    email: "contact@gianmarcocavallo.com",
   },
   visitedCountries: [
     "France",

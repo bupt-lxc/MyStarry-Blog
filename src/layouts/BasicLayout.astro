@@ -179,16 +179,27 @@ const schema =
       set:html={JSON.stringify(schema)}
       type="application/ld+json"
     />
-    <script
-      defer
-      is:inline
-      src="https://cloud.umami.is/script.js"
-      data-website-id={import.meta.env.UMAMI_WEBSITE_ID}
-      data-domains={SITE.site.domain}></script>
-    <script
-      src="https://analytics.ahrefs.com/analytics.js"
-      data-key={import.meta.env.AHREFS_ANALYTICS_KEY}
-      async></script>
+    {
+      import.meta.env.UMAMI_WEBSITE_ID && (
+        <script
+          defer
+          is:inline
+          src="https://cloud.umami.is/script.js"
+          data-website-id={import.meta.env.UMAMI_WEBSITE_ID}
+          data-domains={SITE.site.domain}
+        />
+      )
+    }
+    {
+      import.meta.env.AHREFS_ANALYTICS_KEY && (
+        <script
+          is:inline
+          src="https://analytics.ahrefs.com/analytics.js"
+          data-key={import.meta.env.AHREFS_ANALYTICS_KEY}
+          async
+        />
+      )
+    }
 
     <style is:inline set:html={buttonFrameVars}></style>
   </head>
