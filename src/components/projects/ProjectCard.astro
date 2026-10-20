@@ -37,7 +37,7 @@ const href = `/projects/${data.slug}/`;
     <p class="summary">{data.summary}</p>
     <p class="role"><span>我的职责</span>{data.role}</p>
     <ul class="outcomes" aria-label="项目成果">
-      {data.outcomes.map((outcome) => <li>{outcome}</li>)}
+      {data.outcomes.map((outcome) => <li>{outcome.text}</li>)}
     </ul>
     <ul class="tags" aria-label="技术栈">
       {data.tags.map((tag) => <li>{tag}</li>)}

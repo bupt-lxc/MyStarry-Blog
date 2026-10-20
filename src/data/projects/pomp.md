@@ -7,8 +7,16 @@
   "summary": "在无应用服务器、仅共享盘的办公环境中，贯通采购、合同、供应商与预算协作。",
   "role": "独立完成从零开发与桌面交付",
   "outcomes": [
-    "累计服务 170+ 用户",
-    "自动 Outlook 业务邮件 4500+ 封"
+    {
+      "id": "users",
+      "text": "累计服务 170+ 用户",
+      "emphasis": "170+ 用户"
+    },
+    {
+      "id": "automated-emails",
+      "text": "自动 Outlook 业务邮件 4500+ 封",
+      "emphasis": "4500+ 封"
+    }
   ],
   "tags": [
     "Python",
@@ -25,7 +33,23 @@
     }
   ],
   "cover": "../../assets/projects/pomp-orders.png",
-  "coverAlt": "POMP｜共享盘采购与预算协作系统项目截图"
+  "coverAlt": "POMP｜共享盘采购与预算协作系统项目截图",
+  "primaryCapability": "fullstack",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "独立开发采购、合同与预算协作桌面系统",
+      "以事务和租约锁处理共享盘多人写入，接入 Outlook 通知"
+    ],
+    "primaryOutcomeId": "users",
+    "secondaryOutcomeId": "automated-emails",
+    "tags": [
+      "Python",
+      "Vue 3",
+      "SQLite"
+    ],
+    "sourceLinkIndex": 0
+  }
 }
 ---
 

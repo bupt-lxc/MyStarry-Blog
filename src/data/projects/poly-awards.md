@@ -7,8 +7,16 @@
   "summary": "面向个人、团体和赛事管理者，提供获奖查询、证书下载与后台数据维护。",
   "role": "独立全栈开发、部署与持续运维",
   "outcomes": [
-    "累计使用人数超过 1,100 人",
-    "录入信息 1,400+ 条 · 已落地使用 6 个月"
+    {
+      "id": "users",
+      "text": "累计使用人数超过 1,100 人",
+      "emphasis": "1,100 人"
+    },
+    {
+      "id": "records-operation",
+      "text": "录入信息 1,400+ 条 · 已落地使用 6 个月",
+      "emphasis": "1,400+ 条"
+    }
   ],
   "tags": [
     "Go / Gin",
@@ -20,7 +28,22 @@
   "order": 6,
   "links": [],
   "cover": "../../assets/projects/awards-query.png",
-  "coverAlt": "保利剧院｜国际赛事获奖查询与证书管理项目截图"
+  "coverAlt": "保利剧院｜国际赛事获奖查询与证书管理项目截图",
+  "primaryCapability": "fullstack",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "独立完成查询端、管理后台与证书下载功能",
+      "完成公网部署、资源分发与持续运维"
+    ],
+    "primaryOutcomeId": "users",
+    "secondaryOutcomeId": "records-operation",
+    "tags": [
+      "Go / Gin",
+      "MySQL",
+      "Vue 3"
+    ]
+  }
 }
 ---
 

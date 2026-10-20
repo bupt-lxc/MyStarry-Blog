@@ -7,8 +7,16 @@
   "summary": "以主 Agent 快速查询和多智能体按需生成，处理复杂医疗器械数据库的自然语言查询。",
   "role": "项目负责人；查询架构、智能体编排与检索优化",
   "outcomes": [
-    "整体查询正确率 97%",
-    "View 命中场景 7min → 20s"
+    {
+      "id": "query-accuracy",
+      "text": "整体查询正确率 97%",
+      "emphasis": "97%"
+    },
+    {
+      "id": "view-duration",
+      "text": "View 命中场景 7min → 20s",
+      "emphasis": "7min → 20s"
+    }
   ],
   "tags": [
     "Python",
@@ -25,7 +33,23 @@
     }
   ],
   "cover": "../../assets/projects/xinhua-query.jpeg",
-  "coverAlt": "新华医疗｜自然语言数据库查询智能体项目截图"
+  "coverAlt": "新华医疗｜自然语言数据库查询智能体项目截图",
+  "primaryCapability": "agents",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "负责主 Agent 查询与多智能体按需生成架构",
+      "构建混合 RAG 与 Skills／CLI 查询链路并完成内网部署"
+    ],
+    "primaryOutcomeId": "query-accuracy",
+    "secondaryOutcomeId": "view-duration",
+    "tags": [
+      "LangGraph",
+      "Hybrid RAG",
+      "SQL Server"
+    ],
+    "sourceLinkIndex": 0
+  }
 }
 ---
 

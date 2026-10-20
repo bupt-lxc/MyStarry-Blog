@@ -3,20 +3,27 @@ import test from "node:test";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { validateProjects } from "../src/lib/projects";
+import { validateProjects, type ProjectMetadata } from "../src/lib/projects";
 import {
   validateProjectFiles,
   readProjectFiles,
 } from "../scripts/validate-projects";
 
-const good = {
+const good: ProjectMetadata = {
   slug: "demo",
   title: "示例",
   context: "真实业务",
   period: "2026",
   summary: "摘要",
   role: "开发",
-  outcomes: ["成果"],
+  primaryCapability: "fullstack",
+  secondaryEvidence: [],
+  outcomes: [{ id: "result", text: "成果" }],
+  card: {
+    contributions: ["交付开发"],
+    primaryOutcomeId: "result",
+    tags: ["Python"],
+  },
   tags: ["Python"],
   order: 1,
   links: [],
@@ -86,6 +93,33 @@ test("broken local Markdown image references stop validation", () => {
   assert.throws(() => validateProjectFiles(root), /missing\.png/);
 });
 
+test("secondary evidence must resolve to exactly one explicit ID in its own project body", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "portfolio-anchor-"));
+  mkdirSync(resolve(root, "src/data/projects"), { recursive: true });
+  const data: ProjectMetadata = {
+    ...good,
+    secondaryEvidence: [
+      {
+        capability: "agents",
+        title: "智能体",
+        summary: "知识检索",
+        anchor: "agent-guide",
+      },
+    ],
+  };
+  const path = resolve(root, "src/data/projects/demo.md");
+  const write = (body: string) =>
+    writeFileSync(path, `---\n${JSON.stringify(data)}\n---\n${body}`);
+  write("## agent-guide");
+  assert.throws(() => validateProjectFiles(root), /demo.*anchor.*agent-guide/);
+  write('<span data-id="agent-guide"></span>');
+  assert.throws(() => validateProjectFiles(root), /demo.*anchor.*agent-guide/);
+  write('<span id="agent-guide"></span>');
+  assert.equal(validateProjectFiles(root).projectCount, 1);
+  write('<span id="agent-guide"></span>\n<a id="agent-guide"></a>');
+  assert.throws(() => validateProjectFiles(root), /demo.*anchor.*agent-guide/);
+});
+
 test("canonical v2 metrics replace superseded source metrics", () => {
   const content = (slug: string) =>
     readFileSync(resolve("src/data/projects", `${slug}.md`), "utf8");
@@ -98,5 +132,8 @@ test("canonical v2 metrics replace superseded source metrics", () => {
   assert.match(content("china-mobile-alignment"), /5\.9%/);
   assert.match(content("china-mobile-alignment"), /3\.8%/);
   assert.match(content("china-mobile-alignment"), /1\.6%/);
-  assert.doesNotMatch(content("china-mobile-alignment"), /5\.9 个百分点|3\.8 个百分点|1\.6 个百分点/);
+  assert.doesNotMatch(
+    content("china-mobile-alignment"),
+    /5\.9 个百分点|3\.8 个百分点|1\.6 个百分点/,
+  );
 });

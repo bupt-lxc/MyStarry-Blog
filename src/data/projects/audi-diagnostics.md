@@ -7,8 +7,16 @@
   "summary": "将电检报告预处理、知识检索与多智能体根因分析衔接，生成带证据与排查建议的诊断报告。",
   "role": "数据预处理、诊断知识库与智能体流程开发",
   "outcomes": [
-    "Agent 上下文减少 35% 以上",
-    "Top-5 召回率提高 37 个百分点"
+    {
+      "id": "context-reduction",
+      "text": "Agent 上下文减少 35% 以上",
+      "emphasis": "35% 以上"
+    },
+    {
+      "id": "retrieval-recall",
+      "text": "Top-5 召回率提高 37 个百分点",
+      "emphasis": "37 个百分点"
+    }
   ],
   "tags": [
     "Python",
@@ -23,7 +31,23 @@
       "label": "项目源码",
       "url": "https://github.com/bupt-lxc/AIVehicleDiagnose"
     }
-  ]
+  ],
+  "primaryCapability": "agents",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "开发报告预处理 Skill 与诊断知识库、混合 RAG",
+      "衔接多智能体根因分析与交互式协作诊断"
+    ],
+    "primaryOutcomeId": "context-reduction",
+    "secondaryOutcomeId": "retrieval-recall",
+    "tags": [
+      "LangGraph",
+      "Multi-agent",
+      "Hybrid RAG"
+    ],
+    "sourceLinkIndex": 0
+  }
 }
 ---
 

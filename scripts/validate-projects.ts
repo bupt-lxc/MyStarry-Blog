@@ -29,6 +29,15 @@ export function validateProjectFiles(root: string) {
   for (const { path, data, body } of records) {
     if (data.slug !== path.split(/[\\/]/).pop()?.replace(/\.md$/, ""))
       throw new Error(`文件名与 slug 不一致: ${data.slug}`);
+    const explicitIds = [
+      ...body.matchAll(/<[a-z][^>]*\s+id\s*=\s*["']([^"']+)["'][^>]*>/gi),
+    ].map((match) => match[1]);
+    for (const evidence of data.secondaryEvidence ?? []) {
+      if (explicitIds.filter((id) => id === evidence.anchor).length !== 1)
+        throw new Error(
+          `${data.slug} secondaryEvidence.anchor: ${evidence.anchor} 必须在正文中有且只有一个显式 ID`,
+        );
+    }
     const imageLinks = [...body.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(
       (match) => match[1],
     );

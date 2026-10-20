@@ -7,8 +7,16 @@
   "summary": "连接异构算力实测、持续数据采集与对话式选型，让芯片与模型的选择有数据依据。",
   "role": "评测框架核心开发；算力选型智能体 Owner",
   "outcomes": [
-    "批次完成耗时 42h → 17h",
-    "1,093 条芯片信息 · 1,370 条模型信息 · 3,517 条 Benchmark 记录"
+    {
+      "id": "batch-duration",
+      "text": "固定评测矩阵下，批次完成耗时 42h → 17h",
+      "emphasis": "42h → 17h"
+    },
+    {
+      "id": "benchmark-data",
+      "text": "1,093 条芯片信息 · 1,370 条模型信息 · 3,517 条 Benchmark 记录",
+      "emphasis": "3,517 条 Benchmark 记录"
+    }
   ],
   "tags": [
     "Python",
@@ -33,7 +41,30 @@
     }
   ],
   "cover": "../../assets/projects/aishperf-overview.png",
-  "coverAlt": "AISHPerf｜异构评测与算力选型智能体项目截图"
+  "coverAlt": "AISHPerf｜异构评测与算力选型智能体项目截图",
+  "primaryCapability": "training-inference",
+  "secondaryEvidence": [
+    {
+      "capability": "agents",
+      "title": "算力选型智能体",
+      "summary": "将持续采集的芯片、模型和评测数据接入工具调用与对话式选型流程。",
+      "anchor": "agent-selection"
+    }
+  ],
+  "card": {
+    "contributions": [
+      "核心开发异构评测调度、执行适配与推理调优",
+      "独立负责持续数据采集与算力选型智能体"
+    ],
+    "primaryOutcomeId": "batch-duration",
+    "secondaryOutcomeId": "benchmark-data",
+    "tags": [
+      "Python",
+      "vLLM / CANN",
+      "Celery"
+    ],
+    "sourceLinkIndex": 0
+  }
 }
 ---
 
@@ -46,6 +77,8 @@ AISHPerf 面向华为昇腾／NVIDIA 等异构平台的模型与运行框架，�
 - **统一评测框架**：承接上游 Suite 定义的规则、场景与指标，封装环境预检、容器命令执行、模型服务启动与就绪检查、评测调用及报告解析。对接 vLLM／CANN，覆盖模型兼容性、算子精度／性能及 HCCL 通信评测，统一执行与指标归一化，覆盖 **3 种芯片、24 个模型版本**。
 - **异构异步执行**：基于 Celery＋Redis Broker、Task Routing／Worker Pool，按硬件能力与框架依赖路由任务，结合设备隔离、并发及预取控制。在固定评测矩阵下，批次完成耗时由 **42h 缩短至 17h**，有效评测吞吐由 **4 Case/h 提升至 14 Case/h**。
 - **推理性能调优**：通过 Batch Auto-Tuning 搜索 batch_size 上限，结合 Token Throughput、P95 TTFT／TPOT 与显存约束识别吞吐饱和区，形成性能画像及推荐配置。在 **910B＋DeepSeek-v4-flash** 配置下，保持输出吞吐不降，相对默认配置总显存需求降低 **46%**。
+
+<span id="agent-selection"></span>
 
 ## 算力选型：持续采集与对话式推荐
 

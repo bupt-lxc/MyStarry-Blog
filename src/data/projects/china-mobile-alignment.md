@@ -7,8 +7,16 @@
   "summary": "通过跨轮风险定位与强化学习优化，应对多轮攻击并减少对正常请求的不必要拒答。",
   "role": "风险定位、分支采样、加权 GRPO 与对比实验",
   "outcomes": [
-    "攻击成功率下降 5.9%",
-    "刻板拒答率下降 3.8% · 有害率下降 1.6%"
+    {
+      "id": "attack-success",
+      "text": "攻击成功率下降 5.9%",
+      "emphasis": "5.9%"
+    },
+    {
+      "id": "refusal-harm",
+      "text": "刻板拒答率下降 3.8% · 有害率下降 1.6%",
+      "emphasis": "3.8%"
+    }
   ],
   "tags": [
     "Python",
@@ -18,7 +26,22 @@
     "GRPO"
   ],
   "order": 8,
-  "links": []
+  "links": [],
+  "primaryCapability": "training-inference",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "训练跨轮风险判别模型并设计风险感知分支采样",
+      "实现加权 GRPO 与安全对齐方法对比实验"
+    ],
+    "primaryOutcomeId": "attack-success",
+    "secondaryOutcomeId": "refusal-harm",
+    "tags": [
+      "PyTorch",
+      "DeBERTa",
+      "GRPO"
+    ]
+  }
 }
 ---
 

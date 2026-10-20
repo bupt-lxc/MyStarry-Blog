@@ -7,8 +7,16 @@
   "summary": "将 NVIDIA GPU 上的图像水印模型迁移至海光 DCU，优化推理并完成平台软件交付。",
   "role": "模型适配、算子与推理优化、性能测试及交付",
   "outcomes": [
-    "1080p 编码 1.12 → 0.20 秒／图，提速 5.6 倍",
-    "2025 年 12 月获评光合基金优秀课题"
+    {
+      "id": "encoding-speed",
+      "text": "1080p 编码 1.12 → 0.20 秒／图，提速 5.6 倍",
+      "emphasis": "1.12 → 0.20 秒／图"
+    },
+    {
+      "id": "project-award",
+      "text": "2025 年 12 月获评光合基金优秀课题",
+      "emphasis": "光合基金优秀课题"
+    }
   ],
   "tags": [
     "Python",
@@ -20,7 +28,22 @@
   "order": 7,
   "links": [],
   "cover": "../../assets/projects/dcu-award.png",
-  "coverAlt": "超算互联网｜海光 DCU 图像水印部署与优化项目截图"
+  "coverAlt": "超算互联网｜海光 DCU 图像水印部署与优化项目截图",
+  "primaryCapability": "training-inference",
+  "secondaryEvidence": [],
+  "card": {
+    "contributions": [
+      "迁移 TensorFlow 水印模型至海光 DCU／DTK",
+      "以 XLA、批处理与异步加载优化推理并交付镜像"
+    ],
+    "primaryOutcomeId": "encoding-speed",
+    "secondaryOutcomeId": "project-award",
+    "tags": [
+      "TensorFlow",
+      "DCU / DTK",
+      "XLA"
+    ]
+  }
 }
 ---
 

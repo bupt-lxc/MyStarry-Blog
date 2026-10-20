@@ -7,8 +7,16 @@
   "summary": "通过图像识别、候选确认和展签 OCR 找对展品，再以 RAG Agent 提供讲解与问答。",
   "role": "项目负责人；后端架构、展品检索与 RAG 讲解",
   "outcomes": [
-    "落地 11 处场馆 · 累计服务 6000 余名用户",
-    "核心查询类接口响应时间 100 ms 以内"
+    {
+      "id": "venue-users",
+      "text": "落地 11 处场馆 · 累计服务 6000 余名用户",
+      "emphasis": "6000 余名用户"
+    },
+    {
+      "id": "query-latency",
+      "text": "核心查询类接口响应时间 100 ms 以内",
+      "emphasis": "100 ms 以内"
+    }
   ],
   "tags": [
     "Java",
@@ -20,7 +28,29 @@
   "order": 5,
   "links": [],
   "cover": "../../assets/projects/huaxiaobo-exhibits.jpg",
-  "coverAlt": "华小博｜拍照识别与 AI 讲解小程序项目截图"
+  "coverAlt": "华小博｜拍照识别与 AI 讲解小程序项目截图",
+  "primaryCapability": "fullstack",
+  "secondaryEvidence": [
+    {
+      "capability": "agents",
+      "title": "华小博 RAG 讲解",
+      "summary": "从展品识别、知识检索到讲解生成与个性化问答。",
+      "anchor": "rag-guide"
+    }
+  ],
+  "card": {
+    "contributions": [
+      "负责后端架构与图像、OCR 多路展品检索",
+      "交付 RAG 讲解与问答，以多级缓存优化高频查询"
+    ],
+    "primaryOutcomeId": "venue-users",
+    "secondaryOutcomeId": "query-latency",
+    "tags": [
+      "Java",
+      "RAG Agent",
+      "Redis"
+    ]
+  }
 }
 ---
 
@@ -37,6 +67,8 @@
 我负责后端服务架构、展品检索与 RAG 智能讲解开发，支撑小程序的拍照、搜索和对话入口。
 
 **构建多路展品检索**：结合图像特征匹配、展牌 OCR 与搜索查询连接展品资料；针对相似展品容易混淆的问题，加入低置信度 Top-5 候选确认与展牌文字识别兜底，降低单一路径识别失败对使用体验的影响。
+
+<span id="rag-guide"></span>
 
 - **开发智能讲解服务**：基于 RAG 对接展品知识库与联网检索工具，通过异步处理支持讲解生成和个性化问答；将对话、OCR 与图像匹配拆分为独立服务，便于分别维护与优化。
 
