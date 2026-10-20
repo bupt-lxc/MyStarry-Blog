@@ -9,6 +9,37 @@
 - `.env` 存放镜像、端口；权限 600 的 `.app.env` 存放运行期站点地址和独立管理密钥，均不提交 Git。
 - 页面默认使用原项目黄色 Neon。预览统一 noindex，正式域名准备好后再解除。
 
+## master 自动发布
+
+`.github/workflows/deploy.yml` 在每次推送 `master` 后触发，也可以在 GitHub Actions 的 **Deploy personal website → Run workflow → master** 手动重试。其他分支不会发布。工作流串行执行，不取消正在切换的发布。
+
+GitHub 托管 runner 完成 Node 24/pnpm 11 依赖安装、Node/Python 测试、类型检查、Astro 构建和 linux/amd64 镜像打包，再通过受限 SSH 发布。服务器不编译项目。
+
+本仓库的 Actions 配置如下；留言管理密码和 HMAC 密钥仍只保存在服务器 `.app.env`，不添加到 GitHub。
+
+| 类型 | 名称 | 用途 |
+| --- | --- | --- |
+| Secret | `DEPLOY_SSH_KEY` | 专用 Ed25519 私钥，只在上传步骤注入 |
+| Variable | `PUBLIC_SITE_URL` | `http://81.70.231.92:8550/`，构建时公开地址 |
+| Variable | `DEPLOY_HOST` | 服务器 IP |
+| Variable | `DEPLOY_PORT` | SSH 端口 22 |
+| Variable | `DEPLOY_USER` | `mystarry-deploy` |
+| Variable | `DEPLOY_KNOWN_HOSTS` | 已核验的固定服务器 SSH 公钥，不使用动态 keyscan |
+
+专用账号没有 Docker 组权限、交互 shell、PTY、代理转发或端口转发。其唯一授权密钥只执行 root 所有的 `/usr/local/lib/mystarry/gateway.sh`，通过有限 sudo 调用 `publisher.py`，只接受 `check` 或 `deploy <完整commit SHA> <包SHA-256>`。
+
+发布包只包含静态文件压缩包和镜像压缩包，不能替换服务器 Compose、Nginx、`.env` 或 `.app.env`。发布程序验证大小、路径、文件类型、镜像标签、OCI 配置和 commit，固定操作 `astro-bento` 的 web/app，继续使用 8550。每次发布前先一致性备份 SQLite 并检查完整性，再保存旧静态目录和不可变镜像 ID。
+
+验收失败或捕获到 SIGINT/SIGTERM/SIGHUP 时，恢复旧代码与镜像，保留当时的数据库、会话、限流及运行密钥。发布记录在服务器 `deployments/*.json`，包含 `status`、`old_current`、`old_image`、`backup` 和 `rollback`；临时发布包会清理，旧版本和备份保留。突然断电或 SIGKILL 无法触发进程内恢复，重启后可根据记录手动回滚。
+
+只想重试发布时，在 Actions 重跑失败任务或手动运行 master 即可。更新可信发布程序属于单独运维步骤：核对仓库的 `deployment/publisher.py` 和安装脚本后，用原有管理员 SSH 上传，以 root 在该目录运行 `sh install-publisher.sh <部署公钥文件>`。该步骤不会从自动发布包更新程序，避免上传权限扩展到任意主机命令。不要重新生成已有私钥；若要轮换，先安装新公钥，再更新 `DEPLOY_SSH_KEY` 并验证 `check`。
+
+自动发布使用服务器现有配置。要修改端口、挂载、Nginx 或容器权限，应先人工审查并更新本项目服务器配置，再运行发布。当前 Node 固定 UID/GID 1000:1000，删除所有 Linux capabilities；数据目录权限保持不变。
+
+手动代码回滚时，先读取指定发布记录的 `old_current` 与 `old_image`，确认目标位于本项目 `releases/` 内且镜像仍在，然后仅更新 `current` 和 `.env` 的 `PORTFOLIO_IMAGE`，按下方 stop/rm/up 命令重建 web/app。不要恢复旧数据库来回滚代码，也不要执行全局 Docker 清理命令。
+
+正式域名启用时，还需更新 GitHub Variable `PUBLIC_SITE_URL` 和服务器 `.app.env` 的同名值，再运行一次 master 发布。
+
 ## 本地构建
 
 使用 Node 24、pnpm 11。复制 `.env.example` 为 `.env`，设置实际 `PUBLIC_SITE_URL`。

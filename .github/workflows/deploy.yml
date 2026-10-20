@@ -1,0 +1,88 @@
+name: Deploy personal website
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mystarry-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      ASTRO_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Check out the triggering commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install pinned pnpm and locked dependencies
+        run: |
+          npm install --global pnpm@11.25.0
+          pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Test and typecheck
+        run: |
+          pnpm test
+          python3 -m unittest discover -s tests -p 'test_deploy*.py' -v
+          pnpm check
+
+      - name: Build public files with release identity
+        run: |
+          test -n "$PUBLIC_SITE_URL"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('public/deployment.json').write_text(json.dumps({'commit': os.environ['GITHUB_SHA']}))
+          PY
+          pnpm build
+
+      - name: Build and package Linux runtime
+        run: |
+          docker build --platform linux/amd64 --provenance=false \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -f deployment/Dockerfile -t "mystarry-blog:$GITHUB_SHA" .
+          python3 deployment/package_release.py --commit "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/mystarry-release.tar"
+
+      - name: Publish through restricted SSH command
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key_dir=$(mktemp -d "$RUNNER_TEMP/mystarry-ssh.XXXXXX")
+          trap 'rm -f "$key_dir/key" "$key_dir/known_hosts"; rmdir "$key_dir"' EXIT
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_dir/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$key_dir/known_hosts"
+          digest=$(sha256sum "$RUNNER_TEMP/mystarry-release.tar" | cut -d ' ' -f 1)
+          ssh -T -i "$key_dir/key" -p "$DEPLOY_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$key_dir/known_hosts" \
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=6 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "deploy $GITHUB_SHA $digest" \
+            < "$RUNNER_TEMP/mystarry-release.tar"
+          printf '### 网站发布完成\n\n- 地址：%s\n- 提交：`%s`\n' \
+            "$PUBLIC_SITE_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
