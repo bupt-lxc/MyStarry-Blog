@@ -12,6 +12,24 @@
 
 ---
 
+## 作品集内容维护
+
+项目内容统一维护在 `src/data/projects/*.md` 的 JSON frontmatter 与 Markdown 正文中。作品集按 `fullstack`（全栈开发与项目落地）、`agents`（大模型应用与智能体）、`training-inference`（AI 训练与推理优化）三个方向依次展示。每个项目只设一个 `primaryCapability`，主卡只出现一次；跨方向实践使用 `secondaryEvidence`，填写方向、标题、说明与本项目详情中真实存在且唯一的 `anchor`，由关联行跳到相应证据，避免重复项目卡。
+
+`outcomes` 使用 `{ id, text, emphasis? }` 的结构化成果，`text` 保留完整指标与适用条件，`emphasis` 只标出其中连续的一段。`card.primaryOutcomeId` 指定一个主成果，`secondaryOutcomeId` 可选一个辅助成果；卡片的 `contributions` 为 1–2 条真实贡献，`tags` 为 1–3 个技术标签。可选的 `sourceLinkIndex` 指向项目 `links` 中要展示的源码入口。完整成果与技术栈仍在详情展示。
+
+修改后按顺序验证（Astro 构建需设置部署使用的 `PUBLIC_SITE_URL`，本地可设为 `http://81.70.231.92:8550/`；可同时设置 `ASTRO_TELEMETRY_DISABLED=1`）：
+
+```bash
+pnpm test
+pnpm check
+pnpm build
+python -m unittest discover -s tests -p 'test_*.py' -v
+python scripts/validate-project-output.py
+```
+
+最后一步直接读取 `dist/client` 中生成的 HTML，核对能力分区、唯一主卡、贡献/标签/成果、关联证据锚点，以及详情顶部和底部的主能力返回链接。它不读取运行密钥或访客数据库。部署工作流在构建后执行同一校验，失败时停止，阻止后续 Docker 打包与发布。
+
 ## Features
 
 - 🧩 **Bento-grid layout** — sleek, minimal, single-page-first design
@@ -20,7 +38,7 @@
 - ✍️ **Blog** with Markdown content, reading-time estimates and **RSS** (`/rss.xml`)
 - 💬 **Guestbook** — visitors can leave messages and reactions (backed by libSQL)
 - 🌍 **Interactive 3D globe** and a **travel map** of visited countries
-- 🗂 **Projects** — eight project groups, Markdown details and PhotoSwipe galleries
+- 🗂 **Projects** — three capability sections, unique project cards, Markdown details and PhotoSwipe galleries
 - 🔊 Subtle **UI sound effects** (toggleable)
 - 🚀 **Performance & SEO optimized** — sitemap, robots.txt, Open Graph tags
 - 🐳 **Deployment** — isolated Nginx + official Astro Node runtime + persistent SQLite

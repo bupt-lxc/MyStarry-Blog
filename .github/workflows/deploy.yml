@@ -40,7 +40,7 @@ jobs:
       - name: Test and typecheck
         run: |
           pnpm test
-          python3 -m unittest discover -s tests -p 'test_deploy*.py' -v
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
           pnpm check
 
       - name: Build public files with release identity
@@ -52,6 +52,7 @@ jobs:
           Path('public/deployment.json').write_text(json.dumps({'commit': os.environ['GITHUB_SHA']}))
           PY
           pnpm build
+          python3 scripts/validate-project-output.py
 
       - name: Build and package Linux runtime
         run: |
