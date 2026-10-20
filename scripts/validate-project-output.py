@@ -99,6 +99,8 @@ def load_projects(root):
         try:
             end = lines.index('---', 1)
             data = json.loads('\n'.join(lines[1:end]))
+            # Match the Astro collection schema default for omitted optional evidence.
+            data.setdefault('secondaryEvidence', [])
             slug = data['slug']
             require(isinstance(slug, str) and slug and
                     all(character in 'abcdefghijklmnopqrstuvwxyz0123456789-' for character in slug),

@@ -106,6 +106,11 @@ class ProjectOutputTests(unittest.TestCase):
     def test_valid_fixture_with_void_svg_and_comments(self):
         self.validate()
 
+    def test_omitted_secondary_evidence_uses_astro_empty_default(self):
+        self.projects[2].pop('secondaryEvidence')
+        self.write_sources()
+        self.assertEqual(self.validate()['related'], 1)
+
     def test_project_count_is_derived_from_source(self):
         extra = dict(self.projects[2], slug='project-3', title='项目 3')
         self.projects.append(extra)
