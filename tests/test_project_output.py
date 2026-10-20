@@ -46,10 +46,10 @@ class ProjectOutputTests(unittest.TestCase):
         return f'''<article data-project-slug="{slug}"><img src="/cover.png"><!-- ignored <section> -->
         <a class="project-cover" href="/projects/{slug}/"><svg><path d="M0 0"/></svg></a>
         <h3><a href="/projects/{slug}/">{project['title']}</a></h3>
-        <ul><li data-project-contribution>负责交付</li><li data-project-contribution>完成维护</li></ul>
+        <div class="contributions"><p>我的贡献</p><ul><li data-project-contribution>负责交付</li><li data-project-contribution>完成维护</li></ul></div>
         <ul class="outcomes"><li data-outcome-kind="primary"><span class="project-outcome prominent">固定矩阵下 <strong>42h → 17h</strong></span></li>
         <li data-outcome-kind="secondary"><span class="project-outcome">第二项成果</span></li></ul>
-        <ul><li data-project-tag>Python</li><li data-project-tag>SQL</li></ul>
+        <ul class="tags"><li data-project-tag>Python</li><li data-project-tag>SQL</li></ul>
         <div class="secondary-capabilities">{secondary}</div>
         <div class="links"><a class="detail" href="/projects/{slug}/">查看项目详情</a>
         <a href="https://example.org/source">项目源码</a></div></article>'''
@@ -157,6 +157,24 @@ class ProjectOutputTests(unittest.TestCase):
 
     def test_excess_secondary_results(self):
         self.reject_overview('<ul class="outcomes">', '<ul class="outcomes"><li data-outcome-kind="secondary">extra</li>')
+
+    def test_unmarked_extra_contribution(self):
+        self.reject_overview('<li data-project-contribution>完成维护</li></ul>', '<li data-project-contribution>完成维护</li><li>未经选择的第三条贡献</li></ul>')
+
+    def test_unmarked_third_tag(self):
+        self.reject_overview('<li data-project-tag>SQL</li></ul>', '<li data-project-tag>SQL</li><li>Java</li></ul>')
+
+    def test_unmarked_third_and_fourth_tags(self):
+        self.reject_overview('<li data-project-tag>SQL</li></ul>', '<li data-project-tag>SQL</li><li>Java</li><li>Go</li></ul>')
+
+    def test_contribution_marker_moved_outside_list(self):
+        self.reject_overview('<li data-project-contribution>完成维护</li></ul>', '<li>完成维护</li></ul><li data-project-contribution>完成维护</li>')
+
+    def test_tag_marker_moved_outside_list(self):
+        self.reject_overview('<li data-project-tag>SQL</li></ul>', '<li>SQL</li></ul><li data-project-tag>SQL</li>')
+
+    def test_unmarked_nested_contribution(self):
+        self.reject_overview('<li data-project-contribution>完成维护</li>', '<li data-project-contribution>完成维护<ul><li>额外嵌套贡献</li></ul></li>')
 
     def test_excess_contributions(self):
         self.reject_overview('<li data-project-contribution>负责交付</li>', '<li data-project-contribution>负责交付</li>' * 3)

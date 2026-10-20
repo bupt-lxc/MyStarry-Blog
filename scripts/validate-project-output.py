@@ -189,12 +189,23 @@ def validate_output(root: Path):
         section = card.ancestor(lambda node: node.tag == 'section' and 'data-capability-id' in node.attrs)
         require(section is not None and section.attrs['data-capability-id'] == data['primaryCapability'],
                 f'{slug}: project card is in wrong capability section')
-        for attribute, expected, minimum, maximum in (
-                ('data-project-contribution', data['card']['contributions'], 1, 2),
-                ('data-project-tag', data['card']['tags'], 1, 3)):
-            items = card.descendants(lambda node: attribute in node.attrs)
+        contributions = exactly_one(card.descendants(lambda node: node.has_class('contributions')),
+                                    f'{slug}: contributions container')
+        contribution_list = exactly_one(contributions.descendants(lambda node: node.tag == 'ul'),
+                                        f'{slug}: contributions list')
+        tag_list = exactly_one(card.descendants(lambda node: node.tag == 'ul' and node.has_class('tags')),
+                              f'{slug}: tags list')
+        for container, attribute, expected, minimum, maximum in (
+                (contribution_list, 'data-project-contribution', data['card']['contributions'], 1, 2),
+                (tag_list, 'data-project-tag', data['card']['tags'], 1, 3)):
+            # Inspect actual list contents first: unmarked or nested entries must
+            # not disappear merely because the marker-based query skips them.
+            items = [node for node in container.content if isinstance(node, Element)]
+            marked = card.descendants(lambda node: attribute in node.attrs)
             require(minimum <= len(items) <= maximum and all(node.tag == 'li' for node in items),
                     f'{slug}: invalid {attribute} count or element')
+            require(items == container.descendants(lambda node: node.tag == 'li') == marked,
+                    f'{slug}: missing, misplaced, or unexpected {attribute} markers/list entries')
             require([normalized(node.text()) for node in items] == [normalized(text) for text in expected],
                     f'{slug}: rendered {attribute} differs from source')
         outcomes = {outcome['id']: outcome for outcome in data['outcomes']}
