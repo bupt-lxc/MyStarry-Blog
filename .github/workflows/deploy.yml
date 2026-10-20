@@ -70,6 +70,11 @@ jobs:
           DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
+          # Use the hosted runner's BBR support for the long-distance SSH upload.
+          sudo modprobe tcp_bbr || true
+          if grep -qw bbr /proc/sys/net/ipv4/tcp_available_congestion_control; then
+            sudo sysctl -q -w net.ipv4.tcp_congestion_control=bbr
+          fi
           umask 077
           key_dir=$(mktemp -d "$RUNNER_TEMP/mystarry-ssh.XXXXXX")
           trap 'rm -f "$key_dir/key" "$key_dir/known_hosts"; rmdir "$key_dir"' EXIT
@@ -78,7 +83,7 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_dir/key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$key_dir/known_hosts"
           digest=$(sha256sum "$RUNNER_TEMP/mystarry-release.tar" | cut -d ' ' -f 1)
-          ssh -T -i "$key_dir/key" -p "$DEPLOY_PORT" \
+          ssh -T -o IPQoS=none -i "$key_dir/key" -p "$DEPLOY_PORT" \
             -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$key_dir/known_hosts" \
             -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=6 \
