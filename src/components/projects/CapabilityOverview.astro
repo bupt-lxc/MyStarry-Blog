@@ -1,0 +1,86 @@
+---
+import { CAPABILITIES } from "../../lib/project-capabilities";
+---
+
+<nav class="capability-overview" aria-label="按能力方向浏览项目">
+  {
+    CAPABILITIES.map((capability, index) => (
+      <a class="capability-link card" href={`#${capability.id}`}>
+        <span class="number" aria-hidden="true">
+          {String(index + 1).padStart(2, "0")} ↘
+        </span>
+        <strong>{capability.name}</strong>
+        <p>{capability.description}</p>
+        <span class="keywords">{capability.keywords.join(" · ")}</span>
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .capability-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .capability-link {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 1.4rem;
+    border: 1px solid var(--darkslate-400);
+    border-radius: 1rem;
+    background: var(--darkslate-600);
+    transition: border-color 0.2s;
+  }
+  .capability-link:hover {
+    border-color: var(--primary-500);
+  }
+  .capability-link:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 5px;
+  }
+  .number {
+    color: var(--primary-500);
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  strong {
+    color: var(--darkslate-50);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    font-weight: 700;
+  }
+  p {
+    color: var(--darkslate-200);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    margin: 0.7rem 0 1rem;
+  }
+  .keywords {
+    margin-top: auto;
+    color: var(--darkslate-300);
+    font-size: 0.73rem;
+    line-height: 1.7;
+  }
+  @media (max-width: 759px) {
+    .capability-overview {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+    .capability-link {
+      padding: 1.15rem;
+    }
+    .number {
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin: 0.4rem 0 0.65rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .capability-link {
+      transition: none !important;
+    }
+  }
+</style>

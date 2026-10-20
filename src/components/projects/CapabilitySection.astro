@@ -1,0 +1,118 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getProjectSections } from "../../lib/projects";
+import ProjectCard from "./ProjectCard.astro";
+
+interface Props {
+  section: ReturnType<
+    typeof getProjectSections<CollectionEntry<"projects">>
+  >[number];
+}
+const { section } = Astro.props;
+---
+
+<section
+  id={section.id}
+  data-capability-id={section.id}
+  aria-labelledby={`${section.id}-heading`}
+>
+  <header>
+    <h2 id={`${section.id}-heading`}>{section.name}</h2>
+    <p>{section.description}</p>
+  </header>
+  <div class="project-list">
+    {section.projects.map((project) => <ProjectCard project={project} />)}
+  </div>
+  {
+    section.related.length > 0 && (
+      <aside class="related" aria-label={`${section.name}的关联实践`}>
+        <p class="related-label">关联实践</p>
+        <ul>
+          {section.related.map(({ project, evidence }) => (
+            <li>
+              <a
+                data-related-project={project.data.slug}
+                href={`/projects/${project.data.slug}/#${evidence.anchor}`}
+              >
+                <span class="related-title">
+                  {project.data.title.split("｜")[0]} · {evidence.title}
+                  <span aria-hidden="true"> ↗</span>
+                </span>
+                <span class="related-summary">{evidence.summary}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    )
+  }
+</section>
+
+<style>
+  section {
+    scroll-margin-top: 2rem;
+    margin-top: 3.5rem;
+  }
+  header {
+    margin-bottom: 1.4rem;
+  }
+  h2 {
+    color: var(--darkslate-50);
+    font-size: clamp(1.35rem, 2.5vw, 1.7rem);
+    line-height: 1.5;
+    font-weight: 700;
+  }
+  header p {
+    color: var(--darkslate-300);
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin-top: 0.5rem;
+  }
+  .project-list {
+    display: grid;
+    gap: 1.3rem;
+  }
+  .related {
+    margin-top: 1.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--darkslate-400);
+  }
+  .related-label {
+    color: var(--darkslate-300);
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+  .related li + li {
+    border-top: 1px solid var(--darkslate-400);
+  }
+  .related a {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 0;
+    line-height: 1.8;
+  }
+  .related-title {
+    color: var(--darkslate-100);
+    font-size: 0.86rem;
+  }
+  .related-summary {
+    color: var(--darkslate-300);
+    font-size: 0.8rem;
+  }
+  .related a:hover .related-title {
+    color: var(--primary-500);
+  }
+  .related a:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  @media (max-width: 759px) {
+    section {
+      margin-top: 2.7rem;
+      scroll-margin-top: 1.2rem;
+    }
+    .project-list {
+      gap: 1rem;
+    }
+  }
+</style>

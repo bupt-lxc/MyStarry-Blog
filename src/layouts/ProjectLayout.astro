@@ -4,6 +4,8 @@ import type { MarkdownHeading } from "astro";
 import Layout from "./Layout.astro";
 import BackLink from "../components/BackLink.astro";
 import ProjectGallery from "../components/projects/ProjectGallery.astro";
+import ProjectOutcome from "../components/projects/ProjectOutcome.astro";
+import { CAPABILITIES } from "../lib/project-capabilities";
 import { SITE } from "../site-config";
 interface Props {
   project: CollectionEntry<"projects">;
@@ -11,6 +13,10 @@ interface Props {
 }
 const { project, headings } = Astro.props;
 const { data } = project;
+const primaryCapability = CAPABILITIES.find(
+  (capability) => capability.id === data.primaryCapability,
+)!;
+const portfolioHref = `/projects/#${data.primaryCapability}`;
 const toc = headings.filter(
   (heading) => heading.depth === 2 || heading.depth === 3,
 );
@@ -21,11 +27,27 @@ const toc = headings.filter(
   description={data.summary}
 >
   <main class="project-page">
-    <BackLink href="/projects/" label="← 返回作品集" />
+    <BackLink href={portfolioHref} label="← 返回作品集" />
     <header class="project-header">
       <p class="eyebrow">项目 / {String(data.order).padStart(2, "0")}</p><h1>
         {data.title}
       </h1>
+      <nav class="capability-links" aria-label="项目能力方向">
+        <a href={portfolioHref}>主能力：{primaryCapability.name} ↗</a>
+        {
+          data.secondaryEvidence.map((evidence) => (
+            <a href={`/projects/${data.slug}/#${evidence.anchor}`}>
+              同时覆盖：
+              {
+                CAPABILITIES.find(
+                  (capability) => capability.id === evidence.capability,
+                )?.name
+              }{" "}
+              ↘
+            </a>
+          ))
+        }
+      </nav>
       <p class="context">{data.context} <span>{data.period}</span></p><p
         class="summary"
       >
@@ -33,7 +55,16 @@ const toc = headings.filter(
       </p>
       <dl class="role"><dt>我的职责</dt><dd>{data.role}</dd></dl>
       <ul class="outcomes" aria-label="项目成果">
-        {data.outcomes.map((outcome) => <li>{outcome.text}</li>)}
+        {
+          data.outcomes.map((outcome) => (
+            <li>
+              <ProjectOutcome
+                outcome={outcome}
+                prominent={outcome.id === data.card.primaryOutcomeId}
+              />
+            </li>
+          ))
+        }
       </ul>
       <ul class="tags" aria-label="技术栈">
         {data.tags.map((tag) => <li>{tag}</li>)}
@@ -70,7 +101,7 @@ const toc = headings.filter(
       <article class="project-prose" data-project-gallery><slot /></article>
     </div>
     <footer class="project-footer">
-      <a href="/projects/">← 浏览全部项目</a><a href="/">返回首页 ↗</a>
+      <a href={portfolioHref}>← 浏览全部项目</a><a href="/">返回首页 ↗</a>
     </footer>
   </main>
   <ProjectGallery />
@@ -102,6 +133,19 @@ const toc = headings.filter(
     font-size: 0.85rem;
     line-height: 1.8;
   }
+  .capability-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.2rem;
+    color: var(--primary-500);
+    font-size: 0.8rem;
+    line-height: 1.8;
+    margin-bottom: 1rem;
+  }
+  .capability-links a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
   .context span {
     display: inline-block;
     margin-left: 1rem;
@@ -121,13 +165,9 @@ const toc = headings.filter(
     font-size: 0.75rem;
   }
   .outcomes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem 1.4rem;
+    display: grid;
+    gap: 0.45rem;
     margin: 1.3rem 0;
-    color: var(--primary-400);
-    font-size: 0.9rem;
-    line-height: 1.7;
   }
   .tags {
     display: flex;
@@ -231,6 +271,9 @@ const toc = headings.filter(
   }
 </style>
 <style is:global>
+  .project-page .project-prose [id] {
+    scroll-margin-top: 2rem;
+  }
   .project-prose h2,
   .project-prose h3 {
     color: var(--darkslate-50);

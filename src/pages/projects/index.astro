@@ -2,32 +2,32 @@
 import { getCollection } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import BackLink from "../../components/BackLink.astro";
-import ProjectCard from "../../components/projects/ProjectCard.astro";
-import { sortProjects, validateProjects } from "../../lib/projects";
+import CapabilityOverview from "../../components/projects/CapabilityOverview.astro";
+import CapabilitySection from "../../components/projects/CapabilitySection.astro";
+import { getProjectSections, validateProjects } from "../../lib/projects";
 import { SITE } from "../../site-config";
 export const prerender = true;
-const projects = sortProjects(await getCollection("projects"));
+const projects = await getCollection("projects");
 validateProjects(projects.map((project) => project.data));
+const sections = getProjectSections(projects);
+const projectCount = new Set(projects.map((project) => project.data.slug)).size;
 ---
 
 <Layout
   title={`项目作品集｜${SITE.author.fullName}`}
-  description="李星辰的项目实践：智能体与大模型应用、异构算力评测、全栈交付与算法工程。"
+  description="从业务系统交付，到智能体应用，再到模型训练与推理优化。李星辰的项目作品集。"
 >
   <main class="projects-page">
     <BackLink href="/" label="← 返回首页" />
     <header>
-      <p class="eyebrow">项目实践</p><h1>
-        让技术走进真实场景<span>。</span>
-      </h1><p class="intro">
-        从智能体、检索增强到全栈交付，记录我在真实业务约束下解决问题的过程。
+      <p class="eyebrow">项目实践</p><h1>项目作品集</h1><p class="intro">
+        从业务系统交付，到智能体应用，再到模型训练与推理优化。
       </p><p class="count">
-        {String(projects.length).padStart(2, "0")} 个项目 · 背景 / 职责 / 成果
+        {sections.length} 个能力方向 · {projectCount} 个项目
       </p>
     </header>
-    <div class="project-list">
-      {projects.map((project) => <ProjectCard project={project} />)}
-    </div>
+    <CapabilityOverview />
+    {sections.map((section) => <CapabilitySection section={section} />)}
     <footer><a href="/">返回首页 ↗</a><a href="/blog/">阅读博客 ↗</a></footer>
   </main>
 </Layout>
@@ -52,9 +52,6 @@ validateProjects(projects.map((project) => project.data));
     line-height: 1.3;
     margin: 1rem 0 1.25rem;
   }
-  h1 span {
-    color: var(--primary-500);
-  }
   .intro {
     max-width: 44rem;
     color: var(--darkslate-200);
@@ -65,10 +62,6 @@ validateProjects(projects.map((project) => project.data));
     margin-top: 1.8rem;
     color: var(--darkslate-300);
     font-size: 0.8rem;
-  }
-  .project-list {
-    display: grid;
-    gap: 1.6rem;
   }
   footer {
     display: flex;
@@ -86,8 +79,14 @@ validateProjects(projects.map((project) => project.data));
     header {
       margin-top: 2.5rem;
     }
-    .project-list {
-      gap: 1.2rem;
+  }
+  footer a:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html:has(.projects-page)) {
+      scroll-behavior: smooth;
     }
   }
 </style>

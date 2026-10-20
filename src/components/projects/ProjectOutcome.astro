@@ -1,0 +1,43 @@
+---
+import type { ProjectOutcome as Outcome } from "../../lib/projects";
+
+interface Props {
+  outcome: Outcome;
+  prominent?: boolean;
+}
+const { outcome, prominent = false } = Astro.props;
+const emphasis = outcome.emphasis;
+const start = emphasis ? outcome.text.indexOf(emphasis) : -1;
+const hasEmphasis =
+  Boolean(emphasis) &&
+  start >= 0 &&
+  outcome.text.indexOf(emphasis!, start + 1) === -1;
+const before = hasEmphasis ? outcome.text.slice(0, start) : outcome.text;
+const after = hasEmphasis ? outcome.text.slice(start + emphasis!.length) : "";
+---
+
+<span class:list={["project-outcome", { prominent }]}
+  >{before}{hasEmphasis && <strong>{emphasis}</strong>}{after}</span
+>
+
+<style>
+  .project-outcome {
+    color: var(--darkslate-200);
+    font-size: 0.84rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  strong {
+    font-weight: inherit;
+  }
+  .prominent {
+    color: var(--darkslate-100);
+    font-size: 1.02rem;
+    font-weight: 600;
+  }
+  .prominent strong {
+    color: var(--primary-400);
+    font-size: 1.2em;
+    font-weight: 750;
+  }
+</style>

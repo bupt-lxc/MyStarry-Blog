@@ -1,15 +1,23 @@
 ---
 import { Image } from "astro:assets";
 import type { CollectionEntry } from "astro:content";
+import { CAPABILITIES } from "../../lib/project-capabilities";
+import { getCardOutcomes } from "../../lib/projects";
+import ProjectOutcome from "./ProjectOutcome.astro";
 interface Props {
   project: CollectionEntry<"projects">;
 }
 const { project } = Astro.props;
 const { data } = project;
 const href = `/projects/${data.slug}/`;
+const outcomes = getCardOutcomes(data);
+const source =
+  data.card.sourceLinkIndex === undefined
+    ? undefined
+    : data.links[data.card.sourceLinkIndex];
 ---
 
-<article class="project-card card">
+<article class="project-card card" data-project-slug={data.slug}>
   <a href={href} class="project-cover" aria-label={`查看${data.title}详情`}>
     {
       data.cover ? (
@@ -17,7 +25,7 @@ const href = `/projects/${data.slug}/`;
           src={data.cover}
           alt={data.coverAlt || data.title}
           widths={[480, 800]}
-          sizes="(min-width: 760px) 38vw, 100vw"
+          sizes="(min-width: 1200px) 350px, (min-width: 760px) 30vw, 90vw"
           loading="lazy"
         />
       ) : (
@@ -25,7 +33,7 @@ const href = `/projects/${data.slug}/`;
           <>
             <span>项目 / {String(data.order).padStart(2, "0")}</span>
             <strong>{data.title.split("｜")[0]}</strong>
-            <span>{data.tags.slice(0, 3).join(" · ")}</span>
+            <span>{data.card.tags.join(" · ")}</span>
           </>
         </div>
       )
@@ -33,23 +41,58 @@ const href = `/projects/${data.slug}/`;
   </a>
   <div class="project-copy">
     <p class="context">{data.context}<span>{data.period}</span></p>
-    <h2><a href={href}>{data.title}</a></h2>
+    <h3><a href={href}>{data.title}</a></h3>
     <p class="summary">{data.summary}</p>
-    <p class="role"><span>我的职责</span>{data.role}</p>
+    <div class="contributions">
+      <p>我的贡献</p>
+      <ul>
+        {
+          data.card.contributions.map((contribution) => (
+            <li data-project-contribution>{contribution}</li>
+          ))
+        }
+      </ul>
+    </div>
     <ul class="outcomes" aria-label="项目成果">
-      {data.outcomes.map((outcome) => <li>{outcome.text}</li>)}
+      <li data-outcome-kind="primary">
+        <ProjectOutcome outcome={outcomes.primary} prominent />
+      </li>
+      {
+        outcomes.secondary && (
+          <li data-outcome-kind="secondary">
+            <ProjectOutcome outcome={outcomes.secondary} />
+          </li>
+        )
+      }
     </ul>
     <ul class="tags" aria-label="技术栈">
-      {data.tags.map((tag) => <li>{tag}</li>)}
+      {data.card.tags.map((tag) => <li data-project-tag>{tag}</li>)}
     </ul>
+    {
+      data.secondaryEvidence.length > 0 && (
+        <div class="secondary-capabilities">
+          {data.secondaryEvidence.map((evidence) => (
+            <a href={`${href}#${evidence.anchor}`}>
+              同时覆盖：
+              {
+                CAPABILITIES.find(
+                  (capability) => capability.id === evidence.capability,
+                )?.name
+              }{" "}
+              ↗
+            </a>
+          ))}
+        </div>
+      )
+    }
     <div class="links">
       <a class="detail" href={href}>查看项目详情 ↗</a>{
-        data.links.map((link) => (
-          <a href={link.url} target="_blank" rel="noopener noreferrer">
-            {link.label}
+        source && (
+          <a href={source.url} target="_blank" rel="noopener noreferrer">
+            {source.label}
             <span class="sr-only">（新窗口）</span> ↗
           </a>
-        ))
+        )
       }
     </div>
   </div>
@@ -57,8 +100,7 @@ const href = `/projects/${data.slug}/`;
 <style>
   .project-card {
     display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
     border: 1px solid var(--darkslate-400);
     border-radius: 1.25rem;
     background: var(--darkslate-600);
@@ -69,18 +111,18 @@ const href = `/projects/${data.slug}/`;
   }
   .project-cover {
     display: flex;
-    min-height: 22rem;
+    min-width: 0;
     align-items: center;
     justify-content: center;
-    background: var(--darkslate-800);
-    overflow: hidden;
-    padding: 1.25rem;
+    background: color-mix(in srgb, var(--darkslate-800) 60%, transparent);
+    padding: 1rem;
+    border-radius: inherit;
     border-right: 1px solid var(--darkslate-400);
   }
   .project-cover img {
     width: 100%;
-    height: 100%;
-    max-height: 28rem;
+    height: auto;
+    max-height: 20rem;
     object-fit: contain;
     border-radius: 0.5rem;
     transition: transform 0.25s;
@@ -90,25 +132,27 @@ const href = `/projects/${data.slug}/`;
   }
   .text-cover {
     width: 100%;
-    min-height: 18rem;
+    min-height: 12rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 1rem;
     color: var(--primary-500);
-    gap: 2rem;
+    gap: 1.5rem;
   }
   .text-cover strong {
-    font-size: clamp(1.8rem, 3vw, 3rem);
+    font-size: clamp(1.5rem, 2.5vw, 2.25rem);
     line-height: 1.25;
+    overflow-wrap: anywhere;
   }
   .text-cover span {
     font-size: 0.8rem;
     letter-spacing: 0.08em;
   }
   .project-copy {
-    padding: 2rem;
+    padding: 1.5rem 1.75rem;
     min-width: 0;
+    overflow-wrap: anywhere;
   }
   .context {
     display: flex;
@@ -121,41 +165,54 @@ const href = `/projects/${data.slug}/`;
   .context span {
     white-space: nowrap;
   }
-  h2 {
-    font-size: 1.35rem;
+  h3 {
+    font-size: 1.25rem;
     line-height: 1.5;
-    margin: 0.7rem 0 1rem;
+    margin: 0.55rem 0 0.7rem;
     color: var(--darkslate-50);
     font-weight: 700;
   }
-  h2 a:hover {
+  h3 a:hover {
     color: var(--primary-500);
   }
-  .summary,
-  .role {
-    font-size: 0.9rem;
-    line-height: 1.9;
+  .summary {
+    font-size: 0.86rem;
+    line-height: 1.8;
     color: var(--darkslate-200);
   }
-  .role {
-    margin-top: 1rem;
+  .contributions {
+    margin-top: 0.85rem;
   }
-  .role span {
-    display: block;
+  .contributions p {
     color: var(--darkslate-300);
     font-size: 0.75rem;
   }
-  .outcomes {
-    margin: 1rem 0;
+  .contributions ul {
+    padding-left: 1.1rem;
+    list-style: disc;
+    margin-top: 0.25rem;
     display: grid;
-    gap: 0.45rem;
-    color: var(--primary-400);
-    font-size: 0.88rem;
-    line-height: 1.6;
+    gap: 0.2rem;
+    color: var(--darkslate-200);
+    font-size: 0.84rem;
+    line-height: 1.7;
   }
-  .outcomes li::before {
-    content: "↗";
-    margin-right: 0.5rem;
+  .outcomes {
+    margin: 0.95rem 0;
+    display: grid;
+    gap: 0.3rem;
+  }
+  .secondary-capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--darkslate-300);
+    font-size: 0.75rem;
+    line-height: 1.8;
+    margin-top: 0.65rem;
+  }
+  .secondary-capabilities a:hover {
+    color: var(--primary-500);
   }
   .tags {
     display: flex;
@@ -173,7 +230,7 @@ const href = `/projects/${data.slug}/`;
     display: flex;
     flex-wrap: wrap;
     gap: 0.65rem 1rem;
-    margin-top: 1.4rem;
+    margin-top: 1rem;
     align-items: center;
     font-size: 0.8rem;
     color: var(--darkslate-200);
@@ -190,6 +247,9 @@ const href = `/projects/${data.slug}/`;
     outline: 2px solid var(--primary-500);
     outline-offset: 5px;
   }
+  .project-cover:focus-visible {
+    outline-offset: -5px;
+  }
   .sr-only {
     position: absolute;
     width: 1px;
@@ -203,11 +263,11 @@ const href = `/projects/${data.slug}/`;
   }
   @media (max-width: 759px) {
     .project-card {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .project-cover {
       min-height: 0;
-      height: 15rem;
+      height: 13rem;
       border-right: 0;
       border-bottom: 1px solid var(--darkslate-400);
     }
@@ -227,7 +287,7 @@ const href = `/projects/${data.slug}/`;
   @media (prefers-reduced-motion: reduce) {
     .project-card,
     .project-cover img {
-      transition: none;
+      transition: none !important;
     }
     .project-cover:hover img {
       transform: none;
