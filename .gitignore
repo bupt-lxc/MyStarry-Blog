@@ -34,6 +34,7 @@ backups/
 
 # local code index and deployment archives
 .codegraph/
+.worktrees/
 deployment/*.tar.gz
 __pycache__/
 *.py[cod]
