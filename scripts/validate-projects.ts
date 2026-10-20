@@ -1,7 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { validateProjects, type ProjectMetadata } from "../src/lib/projects";
+
+// These existing CommonJS development tools do not ship TypeScript declarations.
+const require = createRequire(import.meta.url);
+const markdown = new (require("markdown-it"))({ html: true });
+const sanitizeHtml = require("sanitize-html");
 
 /** Frontmatter uses JSON, a YAML subset, so validation needs no parser dependency. */
 export function readProjectFiles(root: string) {
@@ -29,9 +35,17 @@ export function validateProjectFiles(root: string) {
   for (const { path, data, body } of records) {
     if (data.slug !== path.split(/[\\/]/).pop()?.replace(/\.md$/, ""))
       throw new Error(`文件名与 slug 不一致: ${data.slug}`);
-    const explicitIds = [
-      ...body.matchAll(/<[a-z][^>]*\s+id\s*=\s*["']([^"']+)["'][^>]*>/gi),
-    ].map((match) => match[1]);
+    const explicitIds: string[] = [];
+    // Markdown rendering escapes code examples; the HTML parser then ignores
+    // comments and distinguishes real attributes from text inside other values.
+    sanitizeHtml(markdown.render(body), {
+      transformTags: {
+        "*": (tagName: string, attribs: Record<string, string>) => {
+          if (attribs.id !== undefined) explicitIds.push(attribs.id);
+          return { tagName, attribs };
+        },
+      },
+    });
     for (const evidence of data.secondaryEvidence ?? []) {
       if (explicitIds.filter((id) => id === evidence.anchor).length !== 1)
         throw new Error(

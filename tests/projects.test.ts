@@ -120,6 +120,59 @@ test("secondary evidence must resolve to exactly one explicit ID in its own proj
   assert.throws(() => validateProjectFiles(root), /demo.*anchor.*agent-guide/);
 });
 
+for (const [name, body] of [
+  ["fenced HTML code", '```html\n<span id="agent-guide"></span>\n```'],
+  ["HTML comments", '<!-- <span id="agent-guide"></span> -->'],
+  ["quoted attribute contents", `<span title=' id="agent-guide"'></span>`],
+  ["inline code", '`<span id="agent-guide"></span>`'],
+]) {
+  test(`secondary evidence rejects IDs appearing only in ${name}`, () => {
+    const root = writeAnchorProject(body);
+    assert.throws(
+      () => validateProjectFiles(root),
+      /demo.*anchor.*agent-guide/,
+    );
+  });
+}
+
+test("secondary evidence counts actual HTML IDs without counting nonrendered duplicate examples", () => {
+  const root = writeAnchorProject(`
+<div><span title='a > b' id='agent-guide'></span></div>
+
+\`\`\`html
+<span id="agent-guide"></span>
+\`\`\`
+
+<!-- <div><span id="agent-guide"></span></div> -->
+
+<span title=' id="agent-guide"'></span>
+
+\`<span id="agent-guide"></span>\`
+`);
+  assert.equal(validateProjectFiles(root).projectCount, 1);
+});
+
+function writeAnchorProject(body: string) {
+  const root = mkdtempSync(resolve(tmpdir(), "portfolio-rendered-anchor-"));
+  mkdirSync(resolve(root, "src/data/projects"), { recursive: true });
+  const data: ProjectMetadata = {
+    ...good,
+    secondaryEvidence: [
+      {
+        capability: "agents",
+        title: "智能体",
+        summary: "知识检索",
+        anchor: "agent-guide",
+      },
+    ],
+  };
+  writeFileSync(
+    resolve(root, "src/data/projects/demo.md"),
+    `---\n${JSON.stringify(data)}\n---\n${body}`,
+  );
+  return root;
+}
+
 test("canonical v2 metrics replace superseded source metrics", () => {
   const content = (slug: string) =>
     readFileSync(resolve("src/data/projects", `${slug}.md`), "utf8");
