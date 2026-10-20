@@ -1,15 +1,4 @@
 ---
-import PlaygroundShell from "../../components/PlaygroundShell.astro";
-import SlidingImagesLoaderComponent from "../../components/playground/slidingImgesLoader";
-import { SITE } from "../../site-config";
-
 export const prerender = true;
+return Astro.redirect("/projects/", 301);
 ---
-
-<PlaygroundShell
-  title={`${SITE.author.fullName} - Playground - Sliding images loader`}
-  description="Cool sliding images initial loader"
-  floatingBack
->
-  <SlidingImagesLoaderComponent client:load />
-</PlaygroundShell>

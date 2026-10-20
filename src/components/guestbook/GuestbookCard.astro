@@ -1,4 +1,5 @@
 ---
+import GuestbookForm from "./GuestbookForm.astro";
 import {
   avatarColorForSeed,
   formatTimeAgo,
@@ -21,10 +22,19 @@ const avatarColor = avatarColorForSeed(entry.id);
 const avatarInitials = getInitials(entry.name);
 const postedAgo = formatTimeAgo(entry.createdAt);
 const heartCount = entry.heartCount ?? 0;
+const safeWebsite = (() => {
+  try {
+    const url = new URL(entry.website ?? "");
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+})();
 ---
 
 <article
   data-entry-id={entry.id}
+  data-heart-key={`${entry.id}:${new Date(entry.createdAt).toISOString()}`}
   class="bg-darkslate-500 p-5 rounded-xl border border-darkslate-400 hover:border-primary-500/50 transition-[border-color,transform] duration-300 hover:rotate-0 flex flex-col gap-3"
   style={`transform: rotate(${rotationDegrees}deg);`}
 >
@@ -46,9 +56,9 @@ const heartCount = entry.heartCount ?? 0;
     </div>
     <div class="min-w-0 flex-1 flex items-baseline gap-1.5 flex-wrap">
       {
-        entry.website ? (
+        safeWebsite ? (
           <a
-            href={entry.website}
+            href={safeWebsite}
             target="_blank"
             rel="noopener noreferrer"
             class={GUESTBOOK_NAME_LINK_CLASS}
@@ -66,14 +76,28 @@ const heartCount = entry.heartCount ?? 0;
       type="button"
       data-heart-button
       data-heart-count={heartCount}
-      aria-label="Send love"
-      title="Send love"
+      aria-label="为这条留言点赞"
+      title="点赞"
       class="heart-btn flex items-center gap-1 px-2 py-1 rounded-md text-darkslate-300 hover:text-white hover:bg-darkslate-400/30 transition-colors text-xs"
     >
       <Fragment set:html={PIXEL_HEART_SVG} />
       <span class="heart-count tabular-nums">{heartCount}</span>
     </button>
   </footer>
+  <p data-heart-error role="status" class="hidden text-red-400 text-xs"></p>
+  <GuestbookForm parentId={entry.id} replyName={entry.name} />
+  {
+    entry.replies?.length ? (
+      <div
+        class="flex flex-col gap-3 border-l border-darkslate-400 pl-3"
+        aria-label="留言回复"
+      >
+        {entry.replies.map((reply) => (
+          <Astro.self entry={reply} />
+        ))}
+      </div>
+    ) : null
+  }
 </article>
 
 <script>
@@ -109,24 +133,31 @@ const heartCount = entry.heartCount ?? 0;
 
   const initButtonState = (button: HTMLButtonElement): void => {
     const article = button.closest<HTMLElement>("article[data-entry-id]");
-    const entryId = article?.dataset.entryId;
-    if (!entryId) return;
+    const heartKey = article?.dataset.heartKey;
+    if (!heartKey) return;
     const hearted = readHearted();
-    if (hearted.includes(entryId)) button.classList.add("is-active");
+    if (hearted.includes(heartKey)) button.classList.add("is-active");
   };
 
   const handleHeartClick = async (button: HTMLButtonElement): Promise<void> => {
     const article = button.closest<HTMLElement>("article[data-entry-id]");
     const entryId = article?.dataset.entryId;
-    if (!entryId) return;
+    const heartKey = article?.dataset.heartKey;
+    if (!entryId || !heartKey) return;
 
     const hearted = readHearted();
     fireAnimation(button);
     playHeartbeat();
 
-    if (hearted.includes(entryId)) return;
+    if (hearted.includes(heartKey)) return;
+    if (button.disabled) return;
+    button.disabled = true;
+    const errorEl = article?.querySelector<HTMLElement>(
+      ":scope > [data-heart-error]",
+    );
+    errorEl?.classList.add("hidden");
 
-    writeHearted([...hearted, entryId]);
+    writeHearted([...hearted, heartKey]);
     button.classList.add("is-active");
 
     const countEl = button.querySelector<HTMLElement>(".heart-count");
@@ -140,20 +171,32 @@ const heartCount = entry.heartCount ?? 0;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: parseInt(entryId, 10) }),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error ?? "点赞失败，请稍后再试。");
+      }
       const updated = (await response.json()) as {
         heartCount: number | null;
       };
       const serverCount = updated.heartCount ?? optimistic;
       button.dataset.heartCount = String(serverCount);
       if (countEl) countEl.textContent = String(serverCount);
-    } catch {
-      const rollback = readHearted().filter((id) => id !== entryId);
+    } catch (error) {
+      const rollback = readHearted().filter((id) => id !== heartKey);
       writeHearted(rollback);
       button.classList.remove("is-active");
       const fallback = Math.max(0, optimistic - 1);
       button.dataset.heartCount = String(fallback);
       if (countEl) countEl.textContent = String(fallback);
+      if (errorEl) {
+        errorEl.textContent =
+          error instanceof Error
+            ? error.message
+            : "网络暂时不可用，请稍后再试。";
+        errorEl.classList.remove("hidden");
+      }
+    } finally {
+      button.disabled = false;
     }
   };
 

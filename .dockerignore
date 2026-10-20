@@ -1,0 +1,9 @@
+**
+!package.json
+!pnpm-lock.yaml
+!deployment/
+!deployment/Dockerfile
+!dist/
+!dist/**
+!scripts/
+!scripts/backup-guestbook.mjs

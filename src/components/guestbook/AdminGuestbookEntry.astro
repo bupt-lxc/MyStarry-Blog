@@ -1,0 +1,45 @@
+---
+import type { StoredEntry } from "../../lib/server/guestbook-store";
+interface Props {
+  entry: StoredEntry;
+}
+const { entry } = Astro.props;
+---
+
+<article
+  class="bg-darkslate-600 border border-darkslate-400 rounded-xl p-4 mb-3"
+>
+  <div class="flex flex-wrap justify-between gap-3">
+    <p class="text-white font-semibold">
+      {entry.name}
+      <span class="text-darkslate-300 text-xs font-normal"
+        >#{entry.id}{entry.parentId ? ` · 回复 #${entry.parentId}` : ""}</span>
+    </p><button
+      type="button"
+      data-delete-id={entry.id}
+      data-delete-name={entry.name}
+      data-delete-message={entry.message.slice(0, 80)}
+      class="text-red-400 hover:text-red-300 text-sm disabled:opacity-50"
+      >删除此条{entry.replies.length ? "及其回复" : ""}</button>
+  </div>
+  <p class="whitespace-pre-wrap break-words text-darkslate-100 text-sm my-3">
+    {entry.message}
+  </p>
+  <time class="text-darkslate-300 text-xs" datetime={entry.createdAt}
+    >{
+      new Date(entry.createdAt).toLocaleString("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        hour12: false,
+      })
+    }</time
+  >
+  {
+    entry.replies.length ? (
+      <div class="mt-4 pl-3 border-l border-darkslate-400">
+        {entry.replies.map((reply) => (
+          <Astro.self entry={reply} />
+        ))}
+      </div>
+    ) : null
+  }
+</article>

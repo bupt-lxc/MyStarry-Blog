@@ -1,0 +1,188 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import BackLink from "../../components/BackLink.astro";
+import AdminGuestbookEntry from "../../components/guestbook/AdminGuestbookEntry.astro";
+import GuestbookPagination from "../../components/guestbook/GuestbookPagination.astro";
+import {
+  getGuestbookStore,
+  positiveInteger,
+  GuestbookError,
+  type StoredEntry,
+} from "../../lib/server/guestbook-store";
+import { isAdminSession } from "../../lib/server/guestbook-policy";
+export const prerender = false;
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+let loggedIn = false,
+  entries: StoredEntry[] = [],
+  total = 0,
+  page = 1,
+  totalPages = 1,
+  error = "";
+try {
+  loggedIn = isAdminSession(await Astro.session?.get("guestbookAdmin"));
+  if (loggedIn) {
+    page = positiveInteger(Astro.url.searchParams.get("page") ?? "1");
+    ({ entries, total, page, totalPages } =
+      await getGuestbookStore().list(page));
+  }
+} catch (reason) {
+  Astro.response.status =
+    reason instanceof GuestbookError ? reason.status : 503;
+  error = "管理服务暂时不可用，请稍后再试。";
+}
+---
+
+<Layout title="留言管理" description="留言管理后台">
+  <main class="w-full max-w-3xl mx-auto px-5 py-10 min-h-screen text-white">
+    <BackLink href="/guestbook" label="返回留言板" />
+    <h1 class="text-2xl font-semibold mt-10 mb-6">留言管理</h1>
+    <p
+      id="admin-status"
+      role="alert"
+      class:list={["text-sm text-red-400 mb-4", !error && "hidden"]}
+    >
+      {error}
+    </p>
+    {
+      loggedIn ? (
+        <>
+          <div class="flex justify-between items-center mb-5">
+            <>
+              <p>{total} 条主留言</p>
+              <button
+                id="admin-logout"
+                type="button"
+                class="px-4 py-2 rounded-lg bg-darkslate-500 hover:bg-darkslate-400"
+              >
+                退出登录
+              </button>
+            </>
+          </div>
+          <p class="text-darkslate-300 text-sm mb-5">
+            登录有效期为 30 分钟。删除主留言时，其下的回复和点赞会一起删除。
+          </p>
+          {entries.length ? (
+            entries.map((entry) => <AdminGuestbookEntry entry={entry} />)
+          ) : (
+            <p class="text-darkslate-200">暂无留言。</p>
+          )}
+          <GuestbookPagination currentPage={page} totalPages={totalPages} />
+        </>
+      ) : (
+        <form id="admin-login" class="max-w-sm flex flex-col gap-4">
+          <label>
+            <>
+              <span class="block text-darkslate-200 text-sm mb-2">
+                管理密码
+              </span>
+              <input
+                type="password"
+                name="password"
+                required
+                maxlength="1024"
+                autocomplete="current-password"
+                class="w-full rounded-lg px-3 py-2 bg-darkslate-600 border border-darkslate-400 focus:border-primary-400"
+              />
+            </>
+          </label>
+          <button
+            type="submit"
+            class="rounded-lg px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50"
+          >
+            登录
+          </button>
+          <noscript>
+            <p>管理操作需要启用 JavaScript。</p>
+          </noscript>
+        </form>
+      )
+    }
+  </main>
+</Layout>
+<script>
+  function attachAdmin() {
+    const status = document.getElementById("admin-status");
+    const showError = (error: unknown) => {
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "操作失败，请稍后再试。";
+        status.classList.remove("hidden");
+      }
+    };
+    const request = async (url: string, options: RequestInit) => {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "操作失败，请稍后再试。");
+    };
+    const form = document.getElementById(
+      "admin-login",
+    ) as HTMLFormElement | null;
+    if (form && !form.dataset.attached) {
+      form.dataset.attached = "1";
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = form.querySelector<HTMLButtonElement>("button")!;
+        button.disabled = true;
+        button.textContent = "正在登录……";
+        try {
+          await request("/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              password: String(new FormData(form).get("password") ?? ""),
+            }),
+          });
+          window.location.reload();
+        } catch (error) {
+          showError(error);
+        } finally {
+          button.disabled = false;
+          button.textContent = "登录";
+        }
+      });
+    }
+    const logout = document.getElementById(
+      "admin-logout",
+    ) as HTMLButtonElement | null;
+    if (logout && !logout.dataset.attached) {
+      logout.dataset.attached = "1";
+      logout.addEventListener("click", async () => {
+        logout.disabled = true;
+        try {
+          await request("/api/admin/logout", { method: "POST" });
+          window.location.assign("/admin/guestbook");
+        } catch (error) {
+          showError(error);
+          logout.disabled = false;
+        }
+      });
+    }
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-delete-id]")
+      .forEach((button) => {
+        if (button.dataset.attached) return;
+        button.dataset.attached = "1";
+        button.addEventListener("click", async () => {
+          if (
+            !window.confirm(
+              `确定删除 #${button.dataset.deleteId}「${button.dataset.deleteName}」的留言及其所有回复和点赞？\n\n${button.dataset.deleteMessage}\n\n删除后无法撤销。`,
+            )
+          )
+            return;
+          button.disabled = true;
+          try {
+            await request(`/api/admin/guestbook/${button.dataset.deleteId}`, {
+              method: "DELETE",
+            });
+            window.location.reload();
+          } catch (error) {
+            showError(error);
+            button.disabled = false;
+          }
+        });
+      });
+  }
+  attachAdmin();
+  document.addEventListener("astro:page-load", attachAdmin);
+</script>

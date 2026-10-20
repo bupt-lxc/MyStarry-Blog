@@ -1,30 +1,144 @@
 ---
-import { formatDate } from "../lib/helpers";
 import BackLink from "../components/BackLink.astro";
-import BasicLayout from "./BasicLayout.astro";
-
-type Props = {
+import Layout from "./Layout.astro";
+interface Props {
   title: string;
   description: string;
-  pubDate: Date;
-  minutesRead: string;
-};
-
+  pubDate?: Date;
+  minutesRead?: string;
+}
 const { title, description, pubDate, minutesRead } = Astro.props;
+const minutes = minutesRead?.match(/\d+/)?.[0];
 ---
 
-<BasicLayout description={description} page="blog" title={title}>
-  <main class="mx-auto max-w-3xl w-full h-screen p-8 text-neutral-100">
-    <BackLink href="/blog" class="mb-8" />
-    <div class="my-10">
-      <h1 class="text-5xl font-semibold">{title}</h1>
-      <div class="flex justify-between pt-4 text-gray-500 text-sm">
-        <p>{formatDate(pubDate)}</p>
-        <p>{minutesRead}</p>
+<Layout description={description} title={title}>
+  <main class="blog-post">
+    <BackLink href="/blog/" label="← 返回博客" />
+    <header>
+      <h1>{title}</h1><div class="post-meta">
+        {
+          pubDate && (
+            <time datetime={pubDate.toISOString()}>
+              {pubDate.toLocaleDateString("zh-CN", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </time>
+          )
+        }{minutes && <p>约 {minutes} 分钟阅读</p>}
       </div>
-    </div>
-    <article class="prose prose-p:text-red-500 prose-slate prose-invert">
-      <slot />
-    </article>
+    </header>
+    <article class="blog-prose"><slot /></article>
   </main>
-</BasicLayout>
+</Layout>
+<style>
+  .blog-post {
+    max-width: 880px;
+    width: 100%;
+    min-height: 100vh;
+    margin: auto;
+    padding: 3rem 2rem 6rem;
+    color: var(--darkslate-100);
+  }
+  header {
+    margin: 3rem 0;
+  }
+  h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    color: var(--darkslate-300);
+    font-size: 0.8rem;
+  }
+  .blog-prose {
+    line-height: 2;
+    color: var(--darkslate-200);
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 600px) {
+    .blog-post {
+      padding: 2rem 1.2rem 4rem;
+    }
+  }
+</style>
+<style is:global>
+  .blog-prose h2,
+  .blog-prose h3,
+  .blog-prose h4 {
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--darkslate-50);
+    margin: 2rem 0 1rem;
+  }
+  .blog-prose h2 {
+    font-size: 1.5rem;
+  }
+  .blog-prose h3 {
+    font-size: 1.25rem;
+  }
+  .blog-prose p {
+    margin: 1rem 0;
+  }
+  .blog-prose a {
+    color: var(--primary-500);
+    text-decoration: underline;
+  }
+  .blog-prose ul,
+  .blog-prose ol {
+    padding-left: 1.5rem;
+    list-style: revert;
+  }
+  .blog-prose li {
+    margin: 0.5rem 0;
+  }
+  .blog-prose blockquote {
+    border-left: 3px solid var(--primary-500);
+    padding: 0.5rem 1rem;
+    margin: 1.5rem 0;
+    background: var(--darkslate-600);
+  }
+  .blog-prose pre {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1.2rem;
+    border-radius: 0.5rem;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+  }
+  .blog-prose :not(pre) > code {
+    background: var(--darkslate-400);
+    padding: 0.15rem 0.3rem;
+    border-radius: 0.2rem;
+  }
+  .blog-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1.5rem auto;
+  }
+  .blog-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+  }
+  .blog-prose th,
+  .blog-prose td {
+    border: 1px solid var(--darkslate-400);
+    padding: 0.6rem 1rem;
+    min-width: 7rem;
+    text-align: left;
+  }
+  .blog-prose strong {
+    font-weight: 700;
+    color: var(--darkslate-50);
+  }
+</style>

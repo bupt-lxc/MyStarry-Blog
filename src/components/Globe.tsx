@@ -14,6 +14,7 @@ import { pointer, select } from "d3-selection";
 import { runWhileVisible } from "../lib/motion-gate";
 import worldUrl from "../lib/world.json?url";
 import { SITE } from "../site-config";
+import { isVisitedCountry, countryLabel } from "../lib/travel";
 
 type CountryFeature = ExtendedFeature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
@@ -157,25 +158,6 @@ function renderGlobe(
 
   const defs = svg.append("defs");
 
-  const taiwanPattern = defs
-    .append("pattern")
-    .attr("id", "taiwan-stripes")
-    .attr("width", 3)
-    .attr("height", 3)
-    .attr("patternUnits", "userSpaceOnUse")
-    .attr("patternTransform", "rotate(45)");
-  taiwanPattern
-    .append("rect")
-    .attr("width", 3)
-    .attr("height", 3)
-    .attr("fill", COUNTRY_FILL);
-  taiwanPattern
-    .append("rect")
-    .attr("width", 1.5)
-    .attr("height", 3)
-    .attr("fill", "var(--primary-500)")
-    .attr("opacity", "0.5");
-
   const stipple = defs
     .append("pattern")
     .attr("id", "ocean-stipple")
@@ -254,10 +236,10 @@ function renderGlobe(
         .style("opacity", 0.85);
     }
     const cardinals: { d: number; letter: string }[] = [
-      { d: 0, letter: "N" },
-      { d: 90, letter: "E" },
-      { d: 180, letter: "S" },
-      { d: 270, letter: "W" },
+      { d: 0, letter: "北" },
+      { d: 90, letter: "东" },
+      { d: 180, letter: "南" },
+      { d: 270, letter: "西" },
     ];
     for (const { d, letter } of cardinals) {
       const screenAngle = (d - 90) * DEG;
@@ -444,8 +426,7 @@ function renderGlobe(
   });
 
   const fillForCountry = (name: string): string => {
-    if (name === "Taiwan") return "url(#taiwan-stripes)";
-    return visitedCountries.includes(name)
+    return isVisitedCountry(name, visitedCountries)
       ? "var(--primary-500)"
       : COUNTRY_FILL;
   };
@@ -493,13 +474,13 @@ function renderGlobe(
       .style("cursor", "var(--cursor-pointer)")
       .on("mouseover", function (event, d) {
         const name = d.properties.name;
-        const isVisited = visitedCountries.includes(name);
+        const isVisited = isVisitedCountry(name, visitedCountries);
         const el = select(this);
-        if (!isVisited && name !== "Taiwan") {
+        if (!isVisited) {
           el.style("fill", COUNTRY_HOVER_FILL);
         }
         el.style("opacity", 1).style("stroke-width", 0.5);
-        tooltip.html(name).style("opacity", 1);
+        tooltip.text(countryLabel(name)).style("opacity", 1);
         moveTooltip(event);
       })
       .on("mousemove", function (event) {
@@ -623,7 +604,7 @@ const GlobeComponent = ({ isStatic, enableHover, scale }: Props) => {
       ></div>
       {enableHover && (
         <p class="text-sm text-darkslate-300 mt-4 text-center">
-          Click and drag to rotate
+          按住并拖动可旋转地球
         </p>
       )}
     </div>

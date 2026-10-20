@@ -9,27 +9,6 @@ import {
 
 export { count, desc, eq, sql } from "drizzle-orm";
 
-const readEnv = (...keys: string[]): string | undefined => {
-  for (const key of keys) {
-    if (typeof process !== "undefined" && process.env?.[key])
-      return process.env[key];
-    const fromImport = (import.meta.env as Record<string, string | undefined>)[
-      key
-    ];
-    if (fromImport) return fromImport;
-  }
-  return undefined;
-};
-
-const url = readEnv("TURSO_DATABASE_URL", "ASTRO_DB_REMOTE_URL");
-const authToken = readEnv("TURSO_AUTH_TOKEN", "ASTRO_DB_APP_TOKEN");
-
-if (!url) {
-  throw new Error(
-    "Missing database URL. Set TURSO_DATABASE_URL (or ASTRO_DB_REMOTE_URL).",
-  );
-}
-
 const isoDate = customType<{ data: Date; driverData: string }>({
   dataType: () => "text",
   toDriver: (value) => value.toISOString(),
@@ -46,4 +25,8 @@ export const Guestbook = sqliteTable("Guestbook", {
   createdAt: isoDate("createdAt").notNull(),
 });
 
-export const db = drizzle(createClient({ url, authToken }));
+// A factory keeps imports and prerendered builds free of database I/O.
+export function createDatabase(url: string) {
+  const client = createClient({ url });
+  return { client, db: drizzle(client) };
+}

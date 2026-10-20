@@ -1,86 +1,48 @@
 ---
 import Card from "./Card/index.astro";
-import { Image } from "astro:assets";
-import { illustrationsRow1, illustrationsRow2 } from "../lib/illustrations";
+const internships = [
+  {
+    company: "中国电信北京分公司",
+    team: "数智北分 / 创新研发中心",
+    role: "大模型算法实习生",
+    date: "2026.07—2026.10",
+    summary: "智能体数据采集、算力选型推荐与大模型训练推理评测。",
+  },
+  {
+    company: "奥迪（中国）",
+    team: "C/EV-L 测试车辆研发部门",
+    role: "软件开发",
+    date: "2026.04—2026.07",
+    summary: "多智能体车辆诊断、混合 RAG 与采购预算协作系统开发。",
+  },
+  {
+    company: "中国移动九天 AI 研究院",
+    team: "基础研究中心",
+    role: "大模型安全可信实习生",
+    date: "2026.01—2026.04",
+    summary: "Agentic RL、风险感知采样与 GRPO 安全对齐。",
+  },
+];
 ---
 
-<Card
-  colSpan="lg:col-span-1"
-  rowSpan="md:row-span-1"
-  title="Design Works"
-  href="/design-works"
->
-  <div
-    slot="background"
-    class="absolute inset-0 -z-10 overflow-hidden flex flex-col justify-center gap-2 opacity-30"
-  >
-    <!-- fade edges -->
-    <div
-      class="absolute inset-y-0 left-0 w-10 z-10 bg-gradient-to-r from-darkslate-500 to-transparent pointer-events-none"
-    >
-    </div>
-    <div
-      class="absolute inset-y-0 right-0 w-10 z-10 bg-gradient-to-l from-darkslate-500 to-transparent pointer-events-none"
-    >
-    </div>
-
-    <!-- row 1: left -->
-    <div class="flex gap-2 marquee-left">
-      {
-        [...illustrationsRow1, ...illustrationsRow1].map(({ src, alt }) => (
-          <Image
-            src={src}
-            class="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-            alt={alt}
-            width={168}
-            height={168}
-            loading="lazy"
-            decoding="async"
-          />
-        ))
-      }
-    </div>
-
-    <!-- row 2: right -->
-    <div class="flex gap-2 marquee-right">
-      {
-        [...illustrationsRow2, ...illustrationsRow2].map(({ src, alt }) => (
-          <Image
-            src={src}
-            class="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-            alt={alt}
-            width={168}
-            height={168}
-            loading="lazy"
-            decoding="async"
-          />
-        ))
-      }
-    </div>
-  </div>
+<Card colSpan="" class="experience-card" padding="p-6">
+  <p class="eyebrow">从研究到业务现场</p>
+  <h2 class="section-title">实习经历<span class="accent"> / 03</span></h2>
+  <ol class="internship-list">
+    {
+      internships.map((item) => (
+        <li>
+          <div class="internship-heading">
+            <>
+              <h3>{item.company}</h3>
+              <time>{item.date}</time>
+            </>
+          </div>
+          <p class="internship-team">{item.team}</p>
+          <p class="internship-role">{item.role}</p>
+          <p class="internship-summary">{item.summary}</p>
+        </li>
+      ))
+    }
+  </ol>
 </Card>
-
-<style>
-  @keyframes marquee-left {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-50%);
-    }
-  }
-  @keyframes marquee-right {
-    0% {
-      transform: translateX(-50%);
-    }
-    100% {
-      transform: translateX(0);
-    }
-  }
-  .marquee-left {
-    animation: marquee-left 18s linear infinite;
-  }
-  .marquee-right {
-    animation: marquee-right 14s linear infinite;
-  }
-</style>

@@ -1,0 +1,46 @@
+---
+import "photoswipe/style.css";
+---
+
+<script>
+  import PhotoSwipeLightbox from "photoswipe/lightbox";
+  let lightbox: PhotoSwipeLightbox | undefined;
+  function prepareGallery() {
+    lightbox?.destroy();
+    const gallery = document.querySelector<HTMLElement>(
+      "[data-project-gallery]",
+    );
+    if (!gallery) return;
+    gallery.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+      img.loading = "lazy";
+      img.decoding = "async";
+      if (img.closest("a")) return;
+      const link = document.createElement("a");
+      link.href = img.currentSrc || img.src;
+      link.dataset.projectImage = "";
+      link.dataset.pswpWidth =
+        img.getAttribute("width") || String(img.naturalWidth);
+      link.dataset.pswpHeight =
+        img.getAttribute("height") || String(img.naturalHeight);
+      link.setAttribute("aria-label", `放大查看：${img.alt || "项目截图"}`);
+      img.parentNode?.insertBefore(link, img);
+      link.appendChild(img);
+    });
+    lightbox = new PhotoSwipeLightbox({
+      gallery: "[data-project-gallery]",
+      children: "a[data-project-image]",
+      pswpModule: () => import("photoswipe"),
+      closeTitle: "关闭图片（Esc）",
+      zoomTitle: "放大或缩小",
+      arrowPrevTitle: "上一张图片",
+      arrowNextTitle: "下一张图片",
+      errorMsg: "图片暂时无法加载，请关闭后重试。",
+      imageClickAction: "zoom-or-close",
+      bgOpacity: 0.95,
+    });
+    lightbox.init();
+  }
+  prepareGallery();
+  document.addEventListener("astro:page-load", prepareGallery);
+  document.addEventListener("astro:before-swap", () => lightbox?.destroy());
+</script>

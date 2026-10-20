@@ -1,22 +1,161 @@
 ---
+import { getCollection } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import BackLink from "../../components/BackLink.astro";
 import { SITE } from "../../site-config";
-
 export const prerender = true;
+const posts = (await getCollection("blog")).sort(
+  (a, b) => (b.data.pubDate?.valueOf() ?? 0) - (a.data.pubDate?.valueOf() ?? 0),
+);
+const formatDate = (date?: Date) =>
+  date?.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 ---
 
 <Layout
-  description="Software developer with strong focus on the user experience animations and micro interactions"
-  title={`${SITE.author.fullName} - Blog`}
+  description="李星辰的技术笔记与项目复盘，记录智能体、大模型应用和软件工程实践。"
+  title={`博客｜${SITE.author.fullName}`}
 >
-  <main
-    class="w-screen h-screen flex flex-col justify-start items-start max-w-3xl mx-auto p-8"
-  >
-    <BackLink href="/" class="mb-8" />
-    <h1 class="text-4xl font-bold mb-4 text-neutral-100">Posts</h1>
-    <p class="text-darkslate-300 text-sm">
-      Nothing to say right now... check back later (or don't, no pressure 🙃)
-    </p>
+  <main class="blog-page">
+    <BackLink href="/" label="← 返回首页" />
+    <header>
+      <p class="eyebrow">思考与记录</p><h1>博客<span>。</span></h1><p>
+        技术笔记、项目复盘，以及实践中的思考。
+      </p>
+    </header>
+    {
+      posts.length ? (
+        <ul class="post-list">
+          {posts.map((post) => (
+            <li>
+              <a href={`/blog/${post.id}/`}>
+                <div class="post-meta">
+                  {post.data.pubDate && (
+                    <time datetime={post.data.pubDate.toISOString()}>
+                      {formatDate(post.data.pubDate)}
+                    </time>
+                  )}
+                  <span aria-hidden="true">↗</span>
+                </div>
+                <h2>{post.data.title}</h2>
+                <p>{post.data.description}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <section class="empty-state" aria-labelledby="empty-title">
+          <>
+            <span aria-hidden="true">✳</span>
+            <h2 id="empty-title">文章正在整理中</h2>
+            <p>先来看看已经落地的项目，了解我如何把想法做成可用的系统。</p>
+            <a href="/projects/">浏览项目作品集 ↗</a>
+          </>
+        </section>
+      )
+    }
+    <footer>
+      <a href="/rss.xml">订阅 RSS ↗</a><a href="/projects/">项目作品集 ↗</a>
+    </footer>
   </main>
 </Layout>
+<style>
+  .blog-page {
+    max-width: 880px;
+    margin: auto;
+    padding: 3rem 2rem 5rem;
+    min-height: 100vh;
+    color: var(--darkslate-100);
+  }
+  header {
+    margin: 3rem 0;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--primary-500);
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 700;
+    margin: 1rem 0;
+  }
+  h1 span {
+    color: var(--primary-500);
+  }
+  header > p:last-child {
+    font-size: 1rem;
+    line-height: 1.9;
+    color: var(--darkslate-300);
+  }
+  .empty-state {
+    padding: 3rem 2rem;
+    border: 1px solid var(--darkslate-400);
+    border-radius: 1rem;
+    background: var(--darkslate-600);
+  }
+  .empty-state > span {
+    font-size: 2rem;
+    color: var(--primary-500);
+  }
+  .empty-state h2 {
+    font-size: 1.5rem;
+    margin: 1rem 0;
+    font-weight: 600;
+  }
+  .empty-state p {
+    color: var(--darkslate-300);
+    line-height: 1.9;
+    margin-bottom: 1.5rem;
+  }
+  .empty-state a,
+  footer a {
+    color: var(--primary-500);
+    font-size: 0.9rem;
+  }
+  .post-list li {
+    border-bottom: 1px solid var(--darkslate-400);
+  }
+  .post-list a {
+    display: block;
+    padding: 1.8rem 0;
+  }
+  .post-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--darkslate-300);
+  }
+  .post-list h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0.75rem 0;
+  }
+  .post-list p {
+    line-height: 1.9;
+    color: var(--darkslate-300);
+  }
+  .post-list a:hover h2 {
+    color: var(--primary-500);
+  }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  @media (max-width: 600px) {
+    .blog-page {
+      padding: 2rem 1.2rem 4rem;
+    }
+    .empty-state {
+      padding: 2rem 1.25rem;
+    }
+  }
+</style>

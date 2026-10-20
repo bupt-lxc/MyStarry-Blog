@@ -22,6 +22,12 @@ pnpm-debug.log*
 
 # local database
 .data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+.app.env
+backups/
 
 # macOS-specific files
 .DS_Store

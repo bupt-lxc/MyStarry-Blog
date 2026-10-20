@@ -1,0 +1,343 @@
+---
+import type { CollectionEntry } from "astro:content";
+import type { MarkdownHeading } from "astro";
+import Layout from "./Layout.astro";
+import BackLink from "../components/BackLink.astro";
+import ProjectGallery from "../components/projects/ProjectGallery.astro";
+import { SITE } from "../site-config";
+interface Props {
+  project: CollectionEntry<"projects">;
+  headings: MarkdownHeading[];
+}
+const { project, headings } = Astro.props;
+const { data } = project;
+const toc = headings.filter(
+  (heading) => heading.depth === 2 || heading.depth === 3,
+);
+---
+
+<Layout
+  title={`${data.title}｜${SITE.author.fullName}`}
+  description={data.summary}
+>
+  <main class="project-page">
+    <BackLink href="/projects/" label="← 返回作品集" />
+    <header class="project-header">
+      <p class="eyebrow">项目 / {String(data.order).padStart(2, "0")}</p><h1>
+        {data.title}
+      </h1>
+      <p class="context">{data.context} <span>{data.period}</span></p><p
+        class="summary"
+      >
+        {data.summary}
+      </p>
+      <dl class="role"><dt>我的职责</dt><dd>{data.role}</dd></dl>
+      <ul class="outcomes" aria-label="项目成果">
+        {data.outcomes.map((outcome) => <li>{outcome}</li>)}
+      </ul>
+      <ul class="tags" aria-label="技术栈">
+        {data.tags.map((tag) => <li>{tag}</li>)}
+      </ul>
+      {
+        data.links.length > 0 && (
+          <div class="project-links">
+            {data.links.map((link) => (
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.label} ↗
+              </a>
+            ))}
+          </div>
+        )
+      }
+    </header>
+    <div class="detail-grid">
+      {
+        toc.length > 0 && (
+          <nav class="toc" aria-label="项目目录">
+            <>
+              <h2>本页目录</h2>
+              <ol>
+                {toc.map((heading) => (
+                  <li class:list={{ subheading: heading.depth === 3 }}>
+                    <a href={`#${heading.slug}`}>{heading.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </>
+          </nav>
+        )
+      }
+      <article class="project-prose" data-project-gallery><slot /></article>
+    </div>
+    <footer class="project-footer">
+      <a href="/projects/">← 浏览全部项目</a><a href="/">返回首页 ↗</a>
+    </footer>
+  </main>
+  <ProjectGallery />
+</Layout>
+<style>
+  .project-page {
+    width: min(1160px, 100%);
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+    color: var(--darkslate-100);
+  }
+  .project-header {
+    max-width: 880px;
+    margin: 3rem 0 3.5rem;
+  }
+  .eyebrow {
+    font-size: 0.8rem;
+    color: var(--primary-500);
+    letter-spacing: 0.15em;
+  }
+  h1 {
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 1rem 0 1.25rem;
+  }
+  .context {
+    color: var(--darkslate-300);
+    font-size: 0.85rem;
+    line-height: 1.8;
+  }
+  .context span {
+    display: inline-block;
+    margin-left: 1rem;
+  }
+  .summary {
+    font-size: 1.1rem;
+    line-height: 1.9;
+    margin: 1.6rem 0;
+    color: var(--darkslate-200);
+  }
+  .role {
+    font-size: 0.9rem;
+    line-height: 1.9;
+  }
+  .role dt {
+    color: var(--darkslate-300);
+    font-size: 0.75rem;
+  }
+  .outcomes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.4rem;
+    margin: 1.3rem 0;
+    color: var(--primary-400);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tags li {
+    border: 1px solid var(--darkslate-400);
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.7rem;
+  }
+  .project-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.6rem;
+    color: var(--primary-500);
+    font-size: 0.85rem;
+  }
+  .project-links a:hover {
+    text-decoration: underline;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 3.5rem;
+    align-items: start;
+    border-top: 1px solid var(--darkslate-400);
+    padding-top: 2.5rem;
+  }
+  .toc {
+    position: sticky;
+    top: 2rem;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+  .toc h2 {
+    color: var(--darkslate-100);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .toc li {
+    margin: 0.7rem 0;
+    color: var(--darkslate-300);
+  }
+  .toc a:hover {
+    color: var(--primary-500);
+  }
+  .toc .subheading {
+    padding-left: 0.8rem;
+  }
+  .project-prose {
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 2;
+    color: var(--darkslate-200);
+  }
+  .project-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-top: 1px solid var(--darkslate-400);
+    padding-top: 2rem;
+    margin-top: 4rem;
+    color: var(--primary-500);
+    font-size: 0.85rem;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  @media (max-width: 759px) {
+    .project-page {
+      padding: 2rem 1.2rem 4rem;
+    }
+    .project-header {
+      margin: 2.5rem 0;
+    }
+    .detail-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .toc {
+      position: static;
+      border-bottom: 1px solid var(--darkslate-400);
+      padding-bottom: 1.4rem;
+    }
+    .toc ol {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+    }
+    .toc li {
+      margin: 0;
+    }
+    .context span {
+      display: block;
+      margin-left: 0;
+    }
+  }
+</style>
+<style is:global>
+  .project-prose h2,
+  .project-prose h3 {
+    color: var(--darkslate-50);
+    font-weight: 700;
+    line-height: 1.5;
+    scroll-margin-top: 2rem;
+  }
+  .project-prose h2 {
+    font-size: 1.5rem;
+    margin: 2.7rem 0 1rem;
+  }
+  .project-prose h2:first-child {
+    margin-top: 0;
+  }
+  .project-prose h3 {
+    font-size: 1.2rem;
+    margin: 2rem 0 1rem;
+  }
+  .project-prose p {
+    margin: 1rem 0;
+  }
+  .project-prose strong {
+    color: var(--darkslate-50);
+    font-weight: 650;
+  }
+  .project-prose ul,
+  .project-prose ol {
+    padding-left: 1.4rem;
+    margin: 1rem 0;
+    list-style: revert;
+  }
+  .project-prose li {
+    margin: 0.8rem 0;
+  }
+  .project-prose a {
+    color: var(--primary-500);
+    text-underline-offset: 4px;
+  }
+  .project-prose a:hover {
+    text-decoration: underline;
+  }
+  .project-prose a:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  .project-prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.65rem;
+    margin: 2rem auto 0.75rem;
+    background: var(--darkslate-700);
+  }
+  .project-prose a[data-project-image] {
+    display: block;
+    cursor: zoom-in;
+  }
+  .project-prose p:has(> em:only-child) {
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--darkslate-300);
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+  .project-prose blockquote {
+    margin: 1.5rem 0;
+    padding: 0.5rem 1.2rem;
+    border-left: 3px solid var(--primary-500);
+    background: var(--darkslate-600);
+  }
+  .project-prose pre {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    padding: 1.2rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .project-prose :not(pre) > code {
+    background: var(--darkslate-400);
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.2rem;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
+  .project-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+  }
+  .project-prose th,
+  .project-prose td {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--darkslate-400);
+    text-align: left;
+    min-width: 7rem;
+  }
+  .project-prose th {
+    color: var(--darkslate-50);
+    background: var(--darkslate-600);
+  }
+  .project-prose hr {
+    border: 0;
+    border-top: 1px solid var(--darkslate-400);
+    margin: 2rem 0;
+  }
+</style>

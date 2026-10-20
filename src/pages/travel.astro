@@ -3,16 +3,38 @@ import Globe from "../components/Globe";
 import BackLink from "../components/BackLink.astro";
 import BasicLayout from "../layouts/BasicLayout.astro";
 import { SITE } from "../site-config";
-
+import { groupDestinations, countryLabel } from "../lib/travel";
 export const prerender = true;
 ---
 
 <BasicLayout
-  description="A 3d globe showing countries that you have visited so far"
+  description="李星辰的旅行足迹：中国（含台湾）、法国、德国、卢森堡、比利时。"
   page="travel"
-  title={`${SITE.author.fullName} - Visited Countries`}
+  title="旅行足迹 · 李星辰"
 >
-  <BackLink href="/" class="absolute top-4 left-4" />
-
-  <Globe client:load enableHover={true} />
+  <main class="travel-page">
+    <BackLink href="/" label="返回首页" />
+    <div class="travel-page-heading">
+      <p class="eyebrow">在路上，换个视角</p><h1>旅行足迹</h1><p class="muted">
+        去过的地方，也留下新的好奇。
+      </p>
+    </div>
+    <div
+      class="travel-globe"
+      role="img"
+      aria-label="可拖动的地球仪，标亮已到访地区"
+    >
+      <Globe client:load enableHover={true} scale={200} />
+    </div>
+    <ul class="destination-list" aria-label="到访目的地">
+      {
+        groupDestinations(SITE.visitedCountries).map((country) => (
+          <li>
+            {countryLabel(country)}
+            {country === "China" && <span class="muted">（含台湾）</span>}
+          </li>
+        ))
+      }
+    </ul>
+  </main>
 </BasicLayout>

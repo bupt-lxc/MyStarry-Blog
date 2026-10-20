@@ -14,8 +14,10 @@ const BTN = `style-btn ${BTN_BASE}`;
   <button
     id="style-panel-toggle"
     class="style-btn w-full flex-1 min-h-9 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all duration-200 outline-none"
-    aria-label="Toggle style panel"
-    title="Styles"
+    aria-label="展开或收起样式面板"
+    aria-expanded="false"
+    aria-controls="style-btn-list"
+    title="界面样式"
   >
     <Icon
       id="style-icon-sliders"
@@ -41,6 +43,7 @@ const BTN = `style-btn ${BTN_BASE}`;
 
   <div
     id="style-btn-list"
+    inert
     class="w-full overflow-hidden"
     style="max-height:0;transition:max-height 250ms ease"
   >
@@ -51,7 +54,7 @@ const BTN = `style-btn ${BTN_BASE}`;
           class={BTN}
           data-style={id}
           data-label={label}
-          aria-label={`${label} style`}
+          aria-label={`${label}样式`}
           title={label}
         >
           <StyleGlyph index={i} />
@@ -66,9 +69,9 @@ const BTN = `style-btn ${BTN_BASE}`;
     <button
       id="border-toggle"
       class={BTN_BASE}
-      aria-label="Toggle custom card border"
+      aria-label="切换自定义卡片边框"
       aria-pressed="false"
-      title="Custom card border"
+      title="自定义卡片边框"
     >
       <svg
         width="15"
@@ -120,7 +123,7 @@ const BTN = `style-btn ${BTN_BASE}`;
       if (!btn.dataset.style) return;
       btn.classList.toggle("opacity-40", custom);
       btn.title = custom
-        ? `${btn.dataset.label} — switches off the custom border`
+        ? `${btn.dataset.label} — 选择后关闭自定义边框`
         : (btn.dataset.label ?? "");
     });
 
@@ -128,10 +131,7 @@ const BTN = `style-btn ${BTN_BASE}`;
     toggle?.classList.toggle("text-white", custom);
     toggle?.classList.toggle("bg-white/10", custom);
     toggle?.setAttribute("aria-pressed", String(custom));
-    if (toggle)
-      toggle.title = custom
-        ? "Custom card border: on"
-        : "Custom card border: off";
+    if (toggle) toggle.title = custom ? "自定义边框：开" : "自定义边框：关";
   }
 
   function switchBorderMode() {
@@ -161,7 +161,13 @@ const BTN = `style-btn ${BTN_BASE}`;
     const list = document.getElementById("style-btn-list");
     const iconSliders = document.getElementById("style-icon-sliders");
     const iconArrow = document.getElementById("style-icon-arrow");
-    if (list) list.style.maxHeight = open ? "360px" : "0";
+    if (list) {
+      list.style.maxHeight = open ? "360px" : "0";
+      list.inert = !open;
+    }
+    document
+      .getElementById("style-panel-toggle")
+      ?.setAttribute("aria-expanded", String(open));
     iconSliders?.classList.toggle("hidden", open);
     iconArrow?.classList.toggle("hidden", !open);
     localStorage.setItem("stylePanelOpen", String(open));

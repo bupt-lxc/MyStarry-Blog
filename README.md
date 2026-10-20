@@ -1,10 +1,14 @@
-# ⚡️ astro-bento-portfolio
+# MyStarry-Blog｜李星辰的个人主页与作品集
 
-A modern, bento-style personal portfolio built with **[Astro](https://astro.build)**.
+基于开源 [astro-bento-portfolio](https://github.com/Ladvace/astro-bento-portfolio) 改造的中文求职主页，保留原生 Bento 布局、黄色 Neon、主题切换与交互效果。
 
-![astro-bento-portfolio — a bento-like personal portfolio template](public/preview.webp)
+个人资料与实习经历、技术栈、独立项目陈列与 Markdown 详情、图片放大、博客、中文旅行地图及本地 SQLite 留言板均已接入。
 
-**Live:** [gianmarcocavallo.com](https://gianmarcocavallo.com/)
+**预览：** [个人主页](http://81.70.231.92:8550/) · [项目作品集](http://81.70.231.92:8550/projects/)
+
+维护入口：[项目内容](docs/projects-content.md)、[部署与备份](deployment/README.md)、[实施计划](docs/superpowers/plans/2026-10-20-personal-portfolio-implementation.md)。运行 `pnpm test`、`pnpm check`、`pnpm build` 验证；使用 Node 24、pnpm 11。原始素材已纳入 `docs/source-materials/portfolio/`，运行密钥与数据库均被忽略。
+
+下方保留上游模板的技术背景与使用说明，实际部署以本仓库 `deployment/README.md` 为准。感谢原作者的 MIT 开源项目。
 
 ---
 
@@ -16,10 +20,10 @@ A modern, bento-style personal portfolio built with **[Astro](https://astro.buil
 - ✍️ **Blog** with Markdown content, reading-time estimates and **RSS** (`/rss.xml`)
 - 💬 **Guestbook** — visitors can leave messages and reactions (backed by libSQL)
 - 🌍 **Interactive 3D globe** and a **travel map** of visited countries
-- 🧪 **Playground** — a collection of animation/interaction experiments (GSAP morphs, Rive, WebGL-ish effects, scroll animations, and more)
+- 🗂 **Projects** — eight project groups, Markdown details and PhotoSwipe galleries
 - 🔊 Subtle **UI sound effects** (toggleable)
 - 🚀 **Performance & SEO optimized** — sitemap, robots.txt, Open Graph tags
-- ☁️ Ready to deploy on **[Netlify](https://www.netlify.com/)** (SSR)
+- 🐳 **Deployment** — isolated Nginx + official Astro Node runtime + persistent SQLite
 
 ## Tech Stack
 

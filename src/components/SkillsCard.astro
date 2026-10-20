@@ -1,0 +1,120 @@
+---
+import Card from "./Card/index.astro";
+const groups = [
+  {
+    title: "智能体",
+    tags: ["LangChain", "LangGraph", "Skills / Tools", "Memory / Harness"],
+  },
+  {
+    title: "检索与安全",
+    tags: ["混合 RAG", "LightRAG / GraphRAG", "GRPO / DPO", "安全对齐"],
+  },
+  { title: "模型与算法", tags: ["PyTorch", "Transformer", "Python / C++"] },
+  {
+    title: "软件工程",
+    tags: [
+      "Java / Spring Boot",
+      "Vue / Node.js",
+      "Redis / MySQL",
+      "Docker / Linux",
+    ],
+  },
+  { title: "开发工具", tags: ["Claude Code", "Codex", "Tailwind / Figma"] },
+];
+---
+
+<Card colSpan="" class="skills-card" padding="p-6">
+  <div class="skills-top">
+    <div>
+      <p class="eyebrow">持续学习，动手验证</p><h2 class="section-title">
+        核心技能
+      </h2>
+    </div><span class="accent" aria-hidden="true">✳</span>
+  </div>
+  <div class="skill-groups">
+    {
+      groups.map((group) => (
+        <section>
+          <>
+            <h3>{group.title}</h3>
+            <div class="skill-tags">
+              {group.tags.map((tag) => (
+                <span>{tag}</span>
+              ))}
+            </div>
+          </>
+        </section>
+      ))
+    }
+  </div>
+  <button
+    id="skills-open"
+    class="detail-button"
+    aria-haspopup="dialog"
+    aria-controls="skills-dialog"
+    >查看完整技术栈 <span aria-hidden="true">↗</span></button
+  >
+</Card>
+<dialog id="skills-dialog" aria-labelledby="skills-title">
+  <div class="skills-dialog-heading">
+    <h2 id="skills-title">完整技术栈</h2><button
+      id="skills-close"
+      aria-label="关闭完整技术栈">关闭 ×</button
+    >
+  </div>
+  <p class="muted">按实际掌握程度描述，持续在项目中学习与验证。</p>
+  <dl class="full-skills">
+    <dt>编程与基础</dt><dd>
+      Python、Java、C++、JavaScript、HTML、CSS、Node.js；具备扎实的数据结构与算法、计算机网络、操作系统基础。
+    </dd>
+    <dt>软件开发</dt><dd>
+      Spring
+      Boot、Vue、微信小程序、Linux、Redis、Docker、Kafka、RocketMQ、MySQL、PostgreSQL；使用
+      Tailwind CSS 与 Figma。
+    </dd>
+    <dt>AI Agent</dt><dd>
+      掌握 LangChain、LangGraph；熟悉 Workflow、ReAct、Multi-agent，以及
+      Skills、Tools、MCP、Memory、LLM Wiki、Harness Engineering。熟悉 Claude
+      Code、OpenClaw、Pi Agent、Hermes 的源码，阅读并本地部署过 Claude
+      Code、OpenClaw、Hermes，使用 Claude Code、Codex 辅助开发。
+    </dd>
+    <dt>RAG</dt><dd>熟悉 RAG 流程与 LightRAG、GraphRAG，了解 BM25、Chroma。</dd>
+    <dt>RLHF 与安全对齐</dt><dd>
+      熟悉 RLHF 原理，以及 PPO、DPO、GRPO、GSPO、NSPO、DAPO、ARPO。
+    </dd>
+    <dt>模型与深度学习</dt><dd>
+      掌握 PyTorch、TensorFlow，熟悉 Transformer 与深度学习；了解
+      Fine-tuning、QLoRA、YOLO、多模态与 Diffusion。
+    </dd>
+    <dt>训练、推理与量化</dt><dd>
+      熟悉 vLLM、llama-factory、llama.cpp、TensorRT、CANN、ONNX Runtime
+      等训推框架，掌握各种常见量化方法。
+    </dd>
+  </dl>
+</dialog>
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const dialog = document.querySelector<HTMLDialogElement>("#skills-dialog");
+    const opener = document.getElementById("skills-open");
+    opener?.addEventListener("click", () => dialog?.showModal());
+    document
+      .getElementById("skills-close")
+      ?.addEventListener("click", () => dialog?.close());
+    dialog?.addEventListener("close", () => opener?.focus());
+    dialog?.addEventListener("click", (event) => {
+      if (event.target === dialog) {
+        const box = dialog.getBoundingClientRect();
+        if (
+          event.clientX < box.left ||
+          event.clientX > box.right ||
+          event.clientY < box.top ||
+          event.clientY > box.bottom
+        )
+          dialog.close();
+      }
+    });
+  });
+  document.addEventListener("astro:before-swap", () =>
+    document.querySelector<HTMLDialogElement>("#skills-dialog")?.close(),
+  );
+</script>

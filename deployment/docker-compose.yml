@@ -1,10 +1,46 @@
 version: "2.4"
 
 services:
+  app:
+    image: ${PORTFOLIO_IMAGE:-mystarry-blog:latest}
+    container_name: mystarry-blog-app
+    restart: unless-stopped
+    env_file:
+      - .app.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4321
+      GUESTBOOK_DATABASE_URL: file:/data/guestbook.db
+    volumes:
+      - ./data:/data:rw
+      - ./data:/app/.data:rw
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m
+    mem_limit: 192m
+    cpus: 0.5
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4321/api/guestbook?page=1').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
   web:
     image: ${NGINX_IMAGE:-nginx:1.25-alpine}
     container_name: astro-bento-portfolio
     restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
     ports:
       - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-8550}:8080"
     volumes:

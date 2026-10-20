@@ -4,43 +4,10 @@ import { ClientRouter } from "astro:transitions";
 import { Icon } from "astro-icon/components";
 import { Font } from "astro:assets";
 import { SITE } from "../site-config";
-import AvatarCompanion from "../components/AvatarCompanion.astro";
 import GridTransition from "../components/GridTransition.astro";
 import StylePanel from "../components/StylePanel.astro";
 import { BUTTON_FRAME, cssVars } from "../lib/nine-slice";
-import { SHEET_BY_THEME } from "../lib/avatar-sprite.mjs";
-
-const buttonFrameVars = `:root{${cssVars(BUTTON_FRAME)}}`;
-
-const showsAvatar = Astro.url.pathname.replace(/\/+$/, "") === "";
-
-const headBootstrap = `
-  try {
-    if ((localStorage.getItem("cardBorder") ?? "custom") === "custom")
-      document.documentElement.classList.add("cards-custom");
-    if (localStorage.getItem("companionEnabled") === "false")
-      document.documentElement.classList.add("companion-off");
-    ${
-      showsAvatar
-        ? `
-    var sheetsByTheme = ${JSON.stringify(SHEET_BY_THEME)};
-    var sheetUrl =
-      sheetsByTheme[localStorage.getItem("theme")] || sheetsByTheme.default;
-    document.documentElement.style.setProperty(
-      "--memoji-sheet",
-      'url("' + sheetUrl + '")',
-    );
-    var preloadLink = document.createElement("link");
-    preloadLink.rel = "preload";
-    preloadLink.as = "image";
-    preloadLink.href = sheetUrl;
-    preloadLink.fetchPriority = "high";
-    document.head.appendChild(preloadLink);`
-        : ""
-    }
-  } catch {}
-`;
-
+import { appearanceBootstrap } from "../lib/appearance";
 interface Props {
   title: string;
   description: string;
@@ -49,103 +16,60 @@ interface Props {
   hideSoundToggle?: boolean;
   hideCompanion?: boolean;
 }
-
-const { title, description, page, pubDate, hideSoundToggle, hideCompanion } =
-  Astro.props;
-const image = `${Astro.url.origin}/og-image.png`;
-
+const { title, description, page, pubDate, hideSoundToggle } = Astro.props;
+const image = `${Astro.url.origin}/og-image.svg`;
+const person = {
+  "@type": "Person",
+  name: SITE.author.fullName,
+  url: Astro.url.origin,
+  sameAs: [SITE.links.github, SITE.links.bilibili],
+  image: `${Astro.url.origin}/profile-avatar.png`,
+  jobTitle: SITE.author.jobTitle,
+  knowsAbout: ["AI Agent", "RAG", "大模型安全", "软件开发"],
+  affiliation: { "@type": "CollegeOrUniversity", name: "北京邮电大学" },
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "北京",
+    addressCountry: "CN",
+  },
+};
 const schema =
-  page !== "blog"
+  page === "blog"
     ? {
         "@context": "https://schema.org",
-        "@type": "Person",
-        name: SITE.author.fullName,
-        url: Astro.url.origin,
-        sameAs: [
-          SITE.links.linkedin,
-          SITE.links.github,
-          SITE.links.dribbble,
-          SITE.links.behance,
-        ],
-        image: `${Astro.url.origin}/og-image.png`,
-        jobTitle: SITE.author.jobTitle,
-        knowsAbout: [
-          "JavaScript",
-          "React",
-          "Astro",
-          "Solid.js",
-          "Svelte",
-          "Node.js",
-          "User Experience",
-          "Web Development",
-        ],
-        worksFor: {
-          "@type": "Organization",
-          name: "Self-Employed",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: SITE.location.countryName,
-            addressCountry: SITE.location.countryCode,
-          },
-        },
-        nationality: {
-          "@type": "Country",
-          name: SITE.location.countryName,
-        },
-      }
-    : {
-        "@context": "https://schema.org",
         "@type": "BlogPosting",
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": Astro.url.href,
-        },
-        headline: title || title,
-        description: description || title,
-        image: `${Astro.url.origin}/og-image.png`,
-        author: {
-          "@type": "Person",
-          name: SITE.author.shortName,
-          url: Astro.url.origin,
-          sameAs: [SITE.links.linkedin, SITE.links.github],
-        },
-        publisher: {
-          "@type": "Organization",
-          name: SITE.author.shortName,
-          logo: {
-            "@type": "ImageObject",
-            url: `${Astro.url.origin}/og-image.png`,
-          },
-        },
-        datePublished: pubDate || new Date().toISOString(),
-        dateModified: pubDate || new Date().toISOString(),
-      };
+        headline: title,
+        description,
+        image,
+        author: person,
+        datePublished: pubDate,
+        dateModified: pubDate,
+        mainEntityOfPage: Astro.url.href,
+      }
+    : { "@context": "https://schema.org", ...person };
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <Font cssVariable="--font-cabinet-grotesk" preload />
     <Font cssVariable="--font-satoshi" preload />
-    <script is:inline set:html={headBootstrap} />
     <ClientRouter />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="Gianmarco Cavallo" />
+    <link rel="apple-touch-icon" href="/identity-icon.svg" />
+    <meta name="apple-mobile-web-app-title" content="李星辰" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta content={Astro.generator} name="generator" />
     <title>{title}</title>
     <meta content={description} name="description" />
     <meta content="index, follow" name="robots" />
-    <meta name="theme-color" content="#171717" />
+    <meta name="theme-color" content="#111111" />
     <meta name="author" content={SITE.author.fullName} />
     <meta
       name="keywords"
-      content={`full stack developer, web developer, React, Astro, Solid.js, Svelte, freelance developer, ${SITE.location.countryName}, UX, animations, micro-interactions`}
+      content="李星辰,北京邮电大学,AI Agent,RAG,大模型安全,软件开发,Python,Java,LangGraph"
     />
     <meta
       content={page === "blog" ? "article" : "website"}
@@ -153,26 +77,18 @@ const schema =
     />
     <meta content={title} property="og:title" />
     <meta content={description} property="og:description" />
-    <meta content={Astro.url.origin} property="og:url" />
-    <meta property="og:site_name" content={SITE.author.fullName} />
-    <meta property="og:locale" content="en_US" />
-    <meta
-      content={image || `${Astro.url.origin}/og-image.png`}
-      property="og:image"
-    />
-    <meta property="og:image:alt" content={description} />
-    <meta property="og:image:type" content="image/png" />
+    <meta content={Astro.url.href} property="og:url" />
+    <meta property="og:site_name" content="李星辰的个人主页" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta content={image} property="og:image" />
+    <meta property="og:image:alt" content="李星辰 · AI 与软件开发" />
+    <meta property="og:image:type" content="image/svg+xml" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta content="summary_large_image" name="twitter:card" />
     <meta content={title} name="twitter:title" />
     <meta content={description} name="twitter:description" />
-    <meta name="twitter:creator" content={`@${SITE.author.twitterHandle}`} />
-    <meta
-      content={image || `${Astro.url.origin}/og-image.png`}
-      name="twitter:image"
-    />
-
+    <meta content={image} name="twitter:image" />
     <link href={Astro.url.href} rel="canonical" />
     <script
       is:inline
@@ -200,59 +116,49 @@ const schema =
         />
       )
     }
-
-    <style is:inline set:html={buttonFrameVars}></style>
+    <style is:inline set:html={`:root{${cssVars(BUTTON_FRAME)}}`}></style>
   </head>
-  <body class="bg-darkslate-700 flex flex-col justify-center items-center">
-    <script is:inline>
-      try {
-        var b = document.body;
-        var t = localStorage.getItem("theme");
-        if (t && t !== "default") b.classList.add(t);
-        if ((localStorage.getItem("cardBorder") ?? "custom") !== "custom") {
-          var s = localStorage.getItem("portfolioStyle");
-          if (s && s !== "default") b.classList.add(s);
-        }
-      } catch {}
-    </script>
+  <body
+    class="bg-darkslate-700 flex flex-col justify-center items-center yellow-theme style-neon"
+  >
+    <script is:inline set:html={appearanceBootstrap} />
     <GridTransition />
     <slot />
     {
-      (!hideSoundToggle || !hideCompanion) && (
+      !hideSoundToggle && (
         <div class="fixed bottom-4 right-4 md:bottom-6 z-50 flex flex-col items-center gap-2">
-          {!hideSoundToggle && <StylePanel />}
-          {!hideCompanion && <AvatarCompanion />}
-          {!hideSoundToggle && (
-            <button
-              id="sound-toggle"
-              aria-label="Toggle sound"
-              title="Toggle sound"
-              class="chrome--ns w-9 h-9 flex items-center justify-center rounded-lg bg-darkslate-500 border border-darkslate-400 hover:border-primary-500 transition-all duration-200 text-white shadow-lg"
-            >
-              <Icon id="sound-icon-on" name="pixel-sound-on" class="w-4 h-4" />
-              <Icon
-                id="sound-icon-off"
-                name="pixel-sound-off"
-                class="w-4 h-4 hidden"
-              />
-            </button>
-          )}
+          <StylePanel />
+          <button
+            id="sound-toggle"
+            aria-label="关闭音效"
+            title="关闭音效"
+            aria-pressed="true"
+            class="chrome--ns w-9 h-9 flex items-center justify-center rounded-lg bg-darkslate-500 border border-darkslate-400 hover:border-primary-500 transition-all duration-200 text-white shadow-lg"
+          >
+            <Icon id="sound-icon-on" name="pixel-sound-on" class="w-4 h-4" />
+            <Icon
+              id="sound-icon-off"
+              name="pixel-sound-off"
+              class="w-4 h-4 hidden"
+            />
+          </button>
         </div>
       )
     }
   </body>
 </html>
-
 <script>
   import { initNineSliceFallback } from "../lib/nine-slice-fallback";
   import { CARD_HOVER, play } from "../lib/sound";
-  import { SITE } from "../site-config";
-
+  import { applyAppearance } from "../lib/appearance";
+  import {
+    PORTFOLIO_HAS_VISITED_NON_HOME_KEY,
+    PORTFOLIO_LAST_PATH_KEY,
+    normalizePathname,
+  } from "../lib/nav-path";
   let disposeNineSlice: (() => void) | null = null;
-  let soundEnabled = localStorage.getItem("soundEnabled") !== "false";
-
+  let soundEnabled = true;
   const playCardHover = () => play(CARD_HOVER);
-
   function updateToggleIcon() {
     document
       .getElementById("sound-icon-on")
@@ -260,104 +166,72 @@ const schema =
     document
       .getElementById("sound-icon-off")
       ?.classList.toggle("hidden", soundEnabled);
+    const toggle = document.getElementById("sound-toggle");
+    toggle?.setAttribute("aria-label", soundEnabled ? "关闭音效" : "开启音效");
+    toggle?.setAttribute("title", soundEnabled ? "关闭音效" : "开启音效");
+    toggle?.setAttribute("aria-pressed", String(soundEnabled));
   }
-
-  function attachCardSounds() {
+  document.addEventListener("astro:page-load", () => {
+    applyAppearance();
+    try {
+      soundEnabled = localStorage.getItem("soundEnabled") !== "false";
+    } catch {
+      soundEnabled = true;
+    }
+    updateToggleIcon();
     document.querySelectorAll<HTMLElement>(".card").forEach((card) => {
       card.removeEventListener("mouseenter", playCardHover);
       card.addEventListener("mouseenter", playCardHover);
     });
-
     document.getElementById("sound-toggle")?.addEventListener("click", () => {
       soundEnabled = !soundEnabled;
-      localStorage.setItem("soundEnabled", String(soundEnabled));
+      try {
+        localStorage.setItem("soundEnabled", String(soundEnabled));
+      } catch {}
       updateToggleIcon();
     });
-  }
-
-  document.addEventListener("astro:page-load", () => {
-    soundEnabled = localStorage.getItem("soundEnabled") !== "false";
-    updateToggleIcon();
-    attachCardSounds();
     disposeNineSlice?.();
     disposeNineSlice = initNineSliceFallback();
+    try {
+      const path = normalizePathname(window.location.pathname);
+      if (path !== "/")
+        sessionStorage.setItem(PORTFOLIO_HAS_VISITED_NON_HOME_KEY, "1");
+      queueMicrotask(() =>
+        sessionStorage.setItem(PORTFOLIO_LAST_PATH_KEY, path),
+      );
+    } catch {}
   });
-
-  document.addEventListener("astro:before-swap", () => {
+  document.addEventListener("astro:before-swap", (event) => {
+    const next = (event as unknown as { newDocument: Document }).newDocument;
+    applyAppearance(next.body);
     disposeNineSlice?.();
     disposeNineSlice = null;
   });
-
-  console.log(
-    "%c\n" +
-      "  .-. (  ) .-.   .-. (  ) .-.   .-.\n" +
-      " (* *)( ** )* *) (* *)( ** )(* *) (* *)\n" +
-      "  `-'  `--' `-'   `-'  `--' `-'   `-'\n" +
-      "   |    |    |     |    |    |     |\n" +
-      "   |    |    |     |    |    |     |\n" +
-      "---+----+----+-----+----+----+-----+---\n" +
-      " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
-      "   ~    ~    ~     ~    ~    ~     ~\n",
-    "color:var(--primary-500);font-family:monospace;font-size:11px;line-height:1.5;",
-  );
-  console.log(
-    "%cMate, what are you looking for here? 😄",
-    "color:var(--primary-400);font-size:15px;font-weight:bold;",
-  );
-  console.log(
-    "%cJust send me a message, I'd love to connect.\n",
-    "color:var(--darkslate-200);font-size:12px;",
-  );
-  console.log(
-    `%c💼  ${SITE.links.linkedin.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}\n📧  ${SITE.links.email}`,
-    "color:var(--primary-300);font-size:12px;line-height:2;",
-  );
 </script>
-
-<script>
-  import {
-    PORTFOLIO_HAS_VISITED_NON_HOME_KEY,
-    PORTFOLIO_LAST_PATH_KEY,
-    normalizePathname,
-  } from "../lib/nav-path";
-
-  if (typeof document !== "undefined") {
-    document.addEventListener("astro:page-load", () => {
-      const path = normalizePathname(window.location.pathname);
-      if (path !== "/") {
-        sessionStorage.setItem(PORTFOLIO_HAS_VISITED_NON_HOME_KEY, "1");
-      }
-
-      queueMicrotask(() => {
-        sessionStorage.setItem(PORTFOLIO_LAST_PATH_KEY, path);
-      });
-    });
-  }
-</script>
-
 <style is:global>
   body {
     margin: 0;
-    font-family: var(--font-satoshi);
+    min-height: 100dvh;
+    font-family:
+      var(--font-satoshi), "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-family: var(--font-cabinet-grotesk);
+    font-family:
+      var(--font-cabinet-grotesk), "PingFang SC", "Microsoft YaHei", sans-serif;
   }
   p {
-    font-family: var(--font-satoshi);
+    font-family: inherit;
   }
-
   b {
     font-weight: 700 !important;
   }
-
   @supports (view-transition-name: none) {
     ::view-transition-old(root),
     ::view-transition-new(root) {

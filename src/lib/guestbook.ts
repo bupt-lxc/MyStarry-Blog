@@ -8,6 +8,8 @@ export type GuestbookEntry = {
   website: string | null;
   heartCount: number | null;
   createdAt: Date | string;
+  parentId?: number | null;
+  replies?: GuestbookEntry[];
 };
 
 export const ENTRIES_PER_PAGE = 10;
@@ -35,11 +37,11 @@ export const formatTimeAgo = (createdAt: Date | string): string => {
   const daysAgo = Math.floor(
     (Date.now() - new Date(createdAt).getTime()) / 86400000,
   );
-  if (daysAgo <= 0) return "today";
-  if (daysAgo === 1) return "yesterday";
-  if (daysAgo < 30) return `${daysAgo}d ago`;
-  if (daysAgo < 365) return `${Math.floor(daysAgo / 30)}mo ago`;
-  return `${Math.floor(daysAgo / 365)}y ago`;
+  if (daysAgo <= 0) return "今天";
+  if (daysAgo === 1) return "昨天";
+  if (daysAgo < 30) return `${daysAgo} 天前`;
+  if (daysAgo < 365) return `${Math.floor(daysAgo / 30)} 个月前`;
+  return `${Math.floor(daysAgo / 365)} 年前`;
 };
 
 export const rotationFromSeed = (seed: number): number =>

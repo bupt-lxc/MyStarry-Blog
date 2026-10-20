@@ -106,7 +106,7 @@
 
 ### 5.3 材料与事实口径
 
-作品集原始 Markdown 和 12 张图片复制到仓库的 `docs/source-materials/portfolio/`，保留来源材料；网站内容整理到 `src/data/projects/`，配图纳入 Git。简历 PDF 继续作为本地参考，本轮不增加简历下载功能。
+作品集原始 Markdown 和 11 张图片复制到仓库的 `docs/source-materials/portfolio/`，保留来源材料；网站内容整理到 `src/data/projects/`，配图纳入 Git。简历 PDF 继续作为本地参考，本轮不增加简历下载功能。
 
 正文采用 v2 已确认口径：
 
