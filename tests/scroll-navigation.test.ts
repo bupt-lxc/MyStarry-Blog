@@ -45,9 +45,6 @@ function harness({ y = 100, reduced = false, maximum = 4000 } = {}) {
     animations,
     writes,
     position: () => position,
-    nativeJump: (y: number) => {
-      position = { ...position, y };
-    },
   };
 }
 
@@ -137,62 +134,6 @@ test("destinations clamp to page bounds and zero distance completes without anim
   });
   assert.equal(stationary.animations.length, 0);
   assert.equal(completed, true);
-});
-
-test("Astro navigation restores the captured position before animation", async () => {
-  const { controller, animations, writes, nativeJump } = harness();
-  await controller.navigateTo(
-    async () => {
-      nativeJump(1500);
-    },
-    () => 1500,
-  );
-  assert.deepEqual(writes, [{ x: 37, y: 100 }]);
-  assert.equal(animations[0].from, 100);
-  assert.equal(animations[0].to, 1500);
-});
-
-test("interrupted pending navigation cannot restore position, animate, or complete", async () => {
-  const { controller, animations, writes } = harness();
-  let resolve!: () => void;
-  let completed = false;
-  const pending = controller.navigateTo(
-    () =>
-      new Promise<void>((done) => {
-        resolve = done;
-      }),
-    () => 1500,
-    () => {
-      completed = true;
-    },
-  );
-  controller.cancel();
-  resolve();
-  await pending;
-  assert.deepEqual(writes, []);
-  assert.equal(animations.length, 0);
-  assert.equal(completed, false);
-});
-
-test("latest fragment navigation wins even if an older promise resolves last", async () => {
-  const { controller, animations, writes } = harness();
-  let resolve!: () => void;
-  const first = controller.navigateTo(
-    () =>
-      new Promise<void>((done) => {
-        resolve = done;
-      }),
-    () => 2500,
-  );
-  await controller.navigateTo(
-    async () => {},
-    () => 700,
-  );
-  resolve();
-  await first;
-  assert.equal(writes.length, 1);
-  assert.equal(animations.length, 1);
-  assert.equal(animations[0].to, 700);
 });
 
 test("only ordinary same-page fragment links resolve an existing target", () => {
@@ -291,7 +232,7 @@ test("preparation cancellation keeps current-page controls bound until disposal"
     configurable: true,
   });
   try {
-    const dispose = navigation.initScrollNavigation(async () => {}, adapter);
+    const dispose = navigation.initScrollNavigation(adapter);
     assert.equal(button.hidden, false);
     button.dispatchEvent(new Event("click"));
     assert.equal(animations.length, 1);
@@ -322,106 +263,315 @@ test("preparation cancellation keeps current-page controls bound until disposal"
   }
 });
 
-test("delegated fragments survive Astro's own hash popstate but cancel for history and input", async () => {
-  for (const interruption of ["none", "history", "wheel"] as const) {
-    const h = harness({ y: 0 });
-    let focused = false;
-    class TestElement extends EventTarget {
-      href = "https://example.com/projects/#training-inference";
-      closest() {
-        return this;
-      }
-      getAttribute() {
-        return null;
-      }
-      hasAttribute() {
-        return false;
-      }
-    }
-    const link = new TestElement();
-    const target = {
-      isConnected: true,
-      tabIndex: 0,
-      getBoundingClientRect: () => ({ top: 1532 - h.position().y }),
-      focus: () => {
-        focused = true;
-      },
-    };
-    const page = Object.assign(new EventTarget(), {
-      querySelector: () => null,
-      getElementById: () => target,
-    });
-    const browser = Object.assign(new EventTarget(), {
-      location: { href: "https://example.com/projects/" },
-    });
-    Object.defineProperty(browser, "scrollY", { get: () => h.position().y });
-    const replacements = {
-      window: browser,
-      document: page,
-      Element: TestElement,
-      getComputedStyle: () => ({ scrollMarginTop: "32px" }),
-    };
-    const originals = Object.fromEntries(
-      Object.keys(replacements).map((key) => [
-        key,
-        Object.getOwnPropertyDescriptor(globalThis, key),
-      ]),
-    );
-    for (const [key, value] of Object.entries(replacements)) {
-      Object.defineProperty(globalThis, key, { value, configurable: true });
-    }
-    let dispose = () => {};
-    try {
-      let navigations = 0;
-      dispose = navigation.initScrollNavigation(async (href) => {
-        navigations++;
-        browser.location.href = href;
-        h.nativeJump(1500);
-        // Astro's native hash assignment generates a same-target popstate
-        // before its public navigate promise settles.
-        browser.dispatchEvent(new Event("popstate"));
-        if (interruption === "history") {
-          browser.location.href = "https://example.com/projects/#agents";
-          browser.dispatchEvent(new Event("popstate"));
-        } else if (interruption === "wheel") {
-          browser.dispatchEvent(new Event("wheel"));
-        }
-      }, h.adapter);
-      const clickLink = () => {
-        const event = new Event("click", { bubbles: true, cancelable: true });
-        Object.defineProperties(event, {
-          target: { value: link },
-          button: { value: 0 },
-        });
-        page.dispatchEvent(event);
-        return event;
-      };
-      const click = clickLink();
-      await new Promise<void>((resolve) => queueMicrotask(resolve));
-      assert.equal(click.defaultPrevented, true);
-      assert.equal(navigations, 1);
-      if (interruption === "none") {
-        assert.deepEqual(h.writes, [{ x: 37, y: 0 }]);
-        assert.equal(h.animations.length, 1);
-        assert.equal(h.animations[0].to, 1500);
-        h.animations[0].complete();
-        assert.equal(focused, true);
-        // After navigation settles, even a popstate at the same URL cancels.
-        clickLink();
-        await new Promise<void>((resolve) => queueMicrotask(resolve));
-        browser.dispatchEvent(new Event("popstate"));
-        assert.equal(h.animations[1].stopped, true);
-      } else {
-        assert.deepEqual(h.writes, []);
-        assert.equal(h.animations.length, 0);
-        assert.equal(focused, false);
-      }
-    } finally {
-      dispose();
-      for (const [key, descriptor] of Object.entries(originals)) {
-        if (descriptor) Object.defineProperty(globalThis, key, descriptor);
-        else Reflect.deleteProperty(globalThis, key);
-      }
+function withPage(
+  run: (page: ReturnType<typeof createPage>) => void,
+  options: { y?: number; reduced?: boolean; current?: string } = {},
+) {
+  const state = createPage(options);
+  const replacements = {
+    window: state.browser,
+    document: state.document,
+    Element: state.TestElement,
+    getComputedStyle: () => ({ scrollMarginTop: "32px" }),
+  };
+  const originals = Object.fromEntries(
+    Object.keys(replacements).map((key) => [
+      key,
+      Object.getOwnPropertyDescriptor(globalThis, key),
+    ]),
+  );
+  for (const [key, value] of Object.entries(replacements))
+    Object.defineProperty(globalThis, key, { value, configurable: true });
+  const dispose = navigation.initScrollNavigation(state.h.adapter);
+  try {
+    run(state);
+  } finally {
+    dispose();
+    for (const [key, descriptor] of Object.entries(originals)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else Reflect.deleteProperty(globalThis, key);
     }
   }
+}
+
+function createPage({
+  y = 420,
+  reduced = false,
+  current = "https://example.com/projects/",
+} = {}) {
+  const h = harness({ y, reduced });
+  class TestElement extends EventTarget {
+    href: string;
+    constructor(
+      href: string,
+      private attributes: Record<string, string> = {},
+    ) {
+      super();
+      this.href = new URL(href, current).href;
+    }
+    closest() {
+      return this;
+    }
+    getAttribute(key: string) {
+      return this.attributes[key] ?? null;
+    }
+    hasAttribute(key: string) {
+      return key in this.attributes;
+    }
+  }
+  function target(absoluteTop: number) {
+    return {
+      isConnected: true,
+      tabIndex: 0,
+      focused: 0,
+      getBoundingClientRect: () => ({ top: absoluteTop - h.position().y }),
+      focus(options: FocusOptions) {
+        assert.deepEqual(options, { preventScroll: true });
+        this.focused++;
+      },
+    };
+  }
+  const targets = {
+    "training-inference": target(1532),
+    agents: target(2532),
+    fullstack: target(3532),
+    overview: target(732),
+  };
+  const main = target(0);
+  const button = Object.assign(new EventTarget(), {
+    hidden: true,
+    tabIndex: -1,
+  });
+  const document = Object.assign(new EventTarget(), {
+    querySelector: (selector: string) =>
+      selector === "[data-back-to-top]"
+        ? button
+        : selector === "main"
+          ? main
+          : null,
+    getElementById: (id: string) => targets[id as keyof typeof targets] ?? null,
+  });
+  let locationWrites = 0;
+  let historyWrites = 0;
+  const location = {
+    get href() {
+      return current;
+    },
+    set href(value: string) {
+      current = value;
+      locationWrites++;
+    },
+  };
+  const browser = Object.assign(new EventTarget(), {
+    location,
+    history: {
+      pushState: () => {
+        historyWrites++;
+      },
+      replaceState: () => {
+        historyWrites++;
+      },
+    },
+  });
+  Object.defineProperty(browser, "scrollY", { get: () => h.position().y });
+  function click(
+    href: string,
+    properties: Record<string, unknown> = {},
+    attributes = {},
+  ) {
+    const link = new TestElement(href, attributes);
+    const event = new Event("click", { bubbles: true, cancelable: true });
+    for (const [key, value] of Object.entries({
+      target: link,
+      button: 0,
+      ...properties,
+    }))
+      Object.defineProperty(event, key, { value });
+    document.dispatchEvent(event);
+    return { event, link };
+  }
+  return {
+    h,
+    TestElement,
+    targets,
+    main,
+    document,
+    browser,
+    button,
+    click,
+    locationWrites: () => locationWrites,
+    historyWrites: () => historyWrites,
+  };
+}
+
+test("ordinary capability click starts Motion without navigation or a native fragment jump", () => {
+  withPage(({ h, click, browser, locationWrites, historyWrites }) => {
+    const { event, link } = click("#training-inference");
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(locationWrites(), 0);
+    assert.equal(historyWrites(), 0);
+    assert.equal(browser.location.href, "https://example.com/projects/");
+    assert.equal(link.href, "https://example.com/projects/#training-inference");
+    assert.equal(h.position().y, 420);
+    assert.deepEqual(h.writes, []);
+    assert.equal(h.animations.length, 1);
+    assert.equal(h.animations[0].from, 420);
+    assert.equal(h.animations[0].to, 1500);
+  });
+});
+
+test("all capability and TOC links use direct scrolling and focus only on completion", () => {
+  withPage(({ h, click, targets }) => {
+    for (const [id, destination] of [
+      ["training-inference", 1500],
+      ["agents", 2500],
+      ["fullstack", 3500],
+      ["overview", 700],
+    ] as const) {
+      const previous = h.position().y;
+      assert.equal(click(`#${id}`).event.defaultPrevented, true);
+      const animation = h.animations.at(-1)!;
+      assert.equal(animation.from, previous);
+      assert.equal(animation.to, destination);
+      animation.update(destination - 10);
+      assert.equal(targets[id].focused, 0);
+      animation.update(destination);
+      animation.complete();
+      assert.equal(targets[id].focused, 1);
+    }
+  });
+});
+
+test("repeated same-URL clicks animate and a new click replaces the current scroll", () => {
+  withPage(
+    ({ h, click, targets, browser, locationWrites, historyWrites }) => {
+      click("#training-inference");
+      h.animations[0].update(650);
+      click("#training-inference");
+      assert.equal(h.animations[0].stopped, true);
+      assert.equal(h.animations[1].from, 650);
+      assert.equal(h.animations[1].to, 1500);
+      h.animations[1].update(800);
+      click("#overview");
+      assert.equal(h.animations[1].stopped, true);
+      assert.equal(h.animations[2].from, 800);
+      assert.equal(h.animations[2].to, 700);
+      h.animations[0].update(1500);
+      h.animations[0].complete();
+      h.animations[1].complete();
+      assert.equal(h.position().y, 800);
+      assert.equal(targets["training-inference"].focused, 0);
+      h.animations[2].update(700);
+      h.animations[2].complete();
+      assert.equal(targets.overview.focused, 1);
+      assert.equal(
+        browser.location.href,
+        "https://example.com/projects/#training-inference",
+      );
+      assert.equal(locationWrites(), 0);
+      assert.equal(historyWrites(), 0);
+    },
+    { current: "https://example.com/projects/#training-inference" },
+  );
+});
+
+test("manual input, history, preparation, and resize cancel direct scrolling without late focus", () => {
+  for (const interruption of [
+    "wheel",
+    "touchstart",
+    "pointerdown",
+    "keydown",
+    "popstate",
+    "astro:before-preparation",
+    "resize",
+  ]) {
+    withPage(({ h, click, targets, browser, document }) => {
+      click("#training-inference");
+      h.animations[0].update(600);
+      const event = new Event(interruption);
+      if (interruption === "keydown")
+        Object.defineProperty(event, "key", { value: "PageDown" });
+      (interruption.startsWith("astro:") ? document : browser).dispatchEvent(
+        event,
+      );
+      h.animations[0].update(1500);
+      h.animations[0].complete();
+      assert.equal(h.animations[0].stopped, true, interruption);
+      assert.equal(h.position().y, 600, interruption);
+      assert.equal(targets["training-inference"].focused, 0, interruption);
+    });
+  }
+});
+
+test("back-to-top replaces a capability scroll through the same controller", () => {
+  withPage(({ h, click, targets, button, main }) => {
+    click("#training-inference");
+    h.animations[0].update(650);
+    button.dispatchEvent(new Event("click"));
+    assert.equal(h.animations[0].stopped, true);
+    assert.equal(h.animations[1].from, 650);
+    assert.equal(h.animations[1].to, 0);
+    h.animations[0].complete();
+    assert.equal(targets["training-inference"].focused, 0);
+    h.animations[1].update(0);
+    h.animations[1].complete();
+    assert.equal(main.focused, 1);
+  });
+});
+
+test("modified clicks, cross-page links, missing targets, and explicit native links stay untouched", () => {
+  withPage(({ h, click, browser }) => {
+    for (const properties of [
+      { ctrlKey: true },
+      { metaKey: true },
+      { shiftKey: true },
+      { altKey: true },
+      { button: 1 },
+      { defaultPrevented: true },
+    ])
+      assert.equal(
+        click("#training-inference", properties).event.defaultPrevented,
+        Boolean(properties.defaultPrevented),
+      );
+    for (const href of [
+      "/other/#agents",
+      "?other=1#agents",
+      "https://other.com/projects/#agents",
+      "#missing",
+      "#%broken",
+      "#",
+    ])
+      assert.equal(click(href).event.defaultPrevented, false);
+    for (const attributes of [
+      { target: "_blank" },
+      { download: "" },
+      { rel: "external" },
+      { "data-astro-reload": "" },
+    ])
+      assert.equal(
+        click("#training-inference", {}, attributes).event.defaultPrevented,
+        false,
+      );
+    assert.equal(h.animations.length, 0);
+    assert.deepEqual(h.writes, []);
+    assert.equal(browser.location.href, "https://example.com/projects/");
+  });
+});
+
+test("initial deep links remain untouched and reduced-motion clicks finish directly", () => {
+  withPage(
+    ({ h, click, targets, browser }) => {
+      assert.deepEqual(h.writes, []);
+      assert.equal(h.animations.length, 0);
+      click("#training-inference");
+      assert.deepEqual(h.writes, [{ x: 37, y: 1500 }]);
+      assert.equal(h.animations.length, 0);
+      assert.equal(targets["training-inference"].focused, 1);
+      assert.equal(
+        browser.location.href,
+        "https://example.com/projects/#overview",
+      );
+    },
+    { current: "https://example.com/projects/#overview", reduced: true },
+  );
 });

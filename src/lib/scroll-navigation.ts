@@ -74,23 +74,7 @@ export function createScrollController(
     });
   }
 
-  async function navigateTo(
-    navigate: () => Promise<void>,
-    destination: () => number,
-    onComplete?: () => void,
-  ) {
-    cancel();
-    const token = generation;
-    const start = adapter.read();
-    await navigate();
-    if (token !== generation) return;
-    // Astro owns history and performs a synchronous hash jump. Restore before
-    // the next paint so only our numeric animation is visible.
-    adapter.write(start);
-    scrollTo(destination(), onComplete);
-  }
-
-  return { cancel, scrollTo, navigateTo };
+  return { cancel, scrollTo };
 }
 
 type FragmentLink = Pick<
@@ -139,17 +123,12 @@ export function focusScrollTarget(target: HTMLElement) {
 
 /** Bind one page; the layout disposes this scope before Astro navigation. */
 export function initScrollNavigation(
-  navigate: (href: string) => Promise<void>,
   adapter: ScrollAdapter = browserAdapter,
 ): () => void {
   const controller = createScrollController(adapter);
   const scope = new AbortController();
   const { signal } = scope;
-  let pendingFragment: { href: string } | null = null;
-  const cancel = () => {
-    pendingFragment = null;
-    controller.cancel();
-  };
+  const cancel = () => controller.cancel();
   document.addEventListener("astro:before-preparation", cancel, {
     signal,
   });
@@ -188,25 +167,15 @@ export function initScrollNavigation(
       );
       if (!fragment) return;
       event.preventDefault();
-      const { url, target } = fragment;
-      const pending = { href: url.href };
-      pendingFragment = pending;
-      void controller
-        .navigateTo(
-          async () => {
-            try {
-              await navigate(url.href);
-            } finally {
-              if (pendingFragment === pending) pendingFragment = null;
-            }
-          },
-          () =>
-            target.getBoundingClientRect().top +
-            window.scrollY -
-            (parseFloat(getComputedStyle(target).scrollMarginTop) || 0),
-          () => focusScrollTarget(target),
-        )
-        .catch(() => {});
+      const { target } = fragment;
+      // Keep enhanced page clicks out of Astro's native fragment navigation:
+      // its deferred hash scrolling can race with the numeric animation.
+      controller.scrollTo(
+        target.getBoundingClientRect().top +
+          window.scrollY -
+          (parseFloat(getComputedStyle(target).scrollMarginTop) || 0),
+        () => focusScrollTarget(target),
+      );
     },
     { capture: true, signal },
   );
@@ -214,7 +183,6 @@ export function initScrollNavigation(
   button?.addEventListener(
     "click",
     () => {
-      pendingFragment = null;
       controller.scrollTo(0, () => {
         const target =
           document.querySelector<HTMLElement>("main") ??
@@ -250,16 +218,7 @@ export function initScrollNavigation(
     },
     { capture: true, signal },
   );
-  window.addEventListener(
-    "popstate",
-    () => {
-      // Astro assigns location.href while updating a fragment, which can emit a
-      // trusted popstate before navigate resolves. It belongs to this scroll.
-      if (pendingFragment?.href === window.location.href) return;
-      cancel();
-    },
-    { signal },
-  );
+  window.addEventListener("popstate", cancel, { signal });
   window.addEventListener("resize", cancel, { signal });
   return () => {
     cancel();

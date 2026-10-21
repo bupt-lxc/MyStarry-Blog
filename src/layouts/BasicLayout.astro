@@ -154,7 +154,6 @@ const schema =
   </body>
 </html>
 <script>
-  import { navigate } from "astro:transitions/client";
   import { initScrollNavigation } from "../lib/scroll-navigation";
   import { initNineSliceFallback } from "../lib/nine-slice-fallback";
   import { CARD_HOVER, play } from "../lib/sound";
@@ -183,7 +182,7 @@ const schema =
   document.addEventListener("astro:page-load", () => {
     applyAppearance();
     disposeScrollNavigation?.();
-    disposeScrollNavigation = initScrollNavigation(navigate);
+    disposeScrollNavigation = initScrollNavigation();
     try {
       soundEnabled = localStorage.getItem("soundEnabled") !== "false";
     } catch {
