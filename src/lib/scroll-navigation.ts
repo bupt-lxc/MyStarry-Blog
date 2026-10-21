@@ -145,7 +145,12 @@ export function initScrollNavigation(
   const controller = createScrollController(adapter);
   const scope = new AbortController();
   const { signal } = scope;
-  document.addEventListener("astro:before-preparation", controller.cancel, {
+  let pendingFragment: { href: string } | null = null;
+  const cancel = () => {
+    pendingFragment = null;
+    controller.cancel();
+  };
+  document.addEventListener("astro:before-preparation", cancel, {
     signal,
   });
   const button =
@@ -184,9 +189,17 @@ export function initScrollNavigation(
       if (!fragment) return;
       event.preventDefault();
       const { url, target } = fragment;
+      const pending = { href: url.href };
+      pendingFragment = pending;
       void controller
         .navigateTo(
-          () => navigate(url.href),
+          async () => {
+            try {
+              await navigate(url.href);
+            } finally {
+              if (pendingFragment === pending) pendingFragment = null;
+            }
+          },
           () =>
             target.getBoundingClientRect().top +
             window.scrollY -
@@ -201,6 +214,7 @@ export function initScrollNavigation(
   button?.addEventListener(
     "click",
     () => {
+      pendingFragment = null;
       controller.scrollTo(0, () => {
         const target =
           document.querySelector<HTMLElement>("main") ??
@@ -212,7 +226,7 @@ export function initScrollNavigation(
   );
 
   for (const name of ["wheel", "touchstart", "pointerdown"] as const) {
-    window.addEventListener(name, controller.cancel, {
+    window.addEventListener(name, cancel, {
       passive: true,
       capture: true,
       signal,
@@ -232,14 +246,23 @@ export function initScrollNavigation(
   window.addEventListener(
     "keydown",
     (event) => {
-      if (scrollKeys.has(event.key)) controller.cancel();
+      if (scrollKeys.has(event.key)) cancel();
     },
     { capture: true, signal },
   );
-  window.addEventListener("popstate", controller.cancel, { signal });
-  window.addEventListener("resize", controller.cancel, { signal });
+  window.addEventListener(
+    "popstate",
+    () => {
+      // Astro assigns location.href while updating a fragment, which can emit a
+      // trusted popstate before navigate resolves. It belongs to this scroll.
+      if (pendingFragment?.href === window.location.href) return;
+      cancel();
+    },
+    { signal },
+  );
+  window.addEventListener("resize", cancel, { signal });
   return () => {
-    controller.cancel();
+    cancel();
     scope.abort();
   };
 }

@@ -321,3 +321,107 @@ test("preparation cancellation keeps current-page controls bound until disposal"
     else Reflect.deleteProperty(globalThis, "document");
   }
 });
+
+test("delegated fragments survive Astro's own hash popstate but cancel for history and input", async () => {
+  for (const interruption of ["none", "history", "wheel"] as const) {
+    const h = harness({ y: 0 });
+    let focused = false;
+    class TestElement extends EventTarget {
+      href = "https://example.com/projects/#training-inference";
+      closest() {
+        return this;
+      }
+      getAttribute() {
+        return null;
+      }
+      hasAttribute() {
+        return false;
+      }
+    }
+    const link = new TestElement();
+    const target = {
+      isConnected: true,
+      tabIndex: 0,
+      getBoundingClientRect: () => ({ top: 1532 - h.position().y }),
+      focus: () => {
+        focused = true;
+      },
+    };
+    const page = Object.assign(new EventTarget(), {
+      querySelector: () => null,
+      getElementById: () => target,
+    });
+    const browser = Object.assign(new EventTarget(), {
+      location: { href: "https://example.com/projects/" },
+    });
+    Object.defineProperty(browser, "scrollY", { get: () => h.position().y });
+    const replacements = {
+      window: browser,
+      document: page,
+      Element: TestElement,
+      getComputedStyle: () => ({ scrollMarginTop: "32px" }),
+    };
+    const originals = Object.fromEntries(
+      Object.keys(replacements).map((key) => [
+        key,
+        Object.getOwnPropertyDescriptor(globalThis, key),
+      ]),
+    );
+    for (const [key, value] of Object.entries(replacements)) {
+      Object.defineProperty(globalThis, key, { value, configurable: true });
+    }
+    let dispose = () => {};
+    try {
+      let navigations = 0;
+      dispose = navigation.initScrollNavigation(async (href) => {
+        navigations++;
+        browser.location.href = href;
+        h.nativeJump(1500);
+        // Astro's native hash assignment generates a same-target popstate
+        // before its public navigate promise settles.
+        browser.dispatchEvent(new Event("popstate"));
+        if (interruption === "history") {
+          browser.location.href = "https://example.com/projects/#agents";
+          browser.dispatchEvent(new Event("popstate"));
+        } else if (interruption === "wheel") {
+          browser.dispatchEvent(new Event("wheel"));
+        }
+      }, h.adapter);
+      const clickLink = () => {
+        const event = new Event("click", { bubbles: true, cancelable: true });
+        Object.defineProperties(event, {
+          target: { value: link },
+          button: { value: 0 },
+        });
+        page.dispatchEvent(event);
+        return event;
+      };
+      const click = clickLink();
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      assert.equal(click.defaultPrevented, true);
+      assert.equal(navigations, 1);
+      if (interruption === "none") {
+        assert.deepEqual(h.writes, [{ x: 37, y: 0 }]);
+        assert.equal(h.animations.length, 1);
+        assert.equal(h.animations[0].to, 1500);
+        h.animations[0].complete();
+        assert.equal(focused, true);
+        // After navigation settles, even a popstate at the same URL cancels.
+        clickLink();
+        await new Promise<void>((resolve) => queueMicrotask(resolve));
+        browser.dispatchEvent(new Event("popstate"));
+        assert.equal(h.animations[1].stopped, true);
+      } else {
+        assert.deepEqual(h.writes, []);
+        assert.equal(h.animations.length, 0);
+        assert.equal(focused, false);
+      }
+    } finally {
+      dispose();
+      for (const [key, descriptor] of Object.entries(originals)) {
+        if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+        else Reflect.deleteProperty(globalThis, key);
+      }
+    }
+  }
+});
