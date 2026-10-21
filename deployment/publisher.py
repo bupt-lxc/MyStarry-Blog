@@ -26,7 +26,7 @@ ROOT = Path("/home/ubuntu/astro-bento-portfolio")
 PROJECT = "astro-bento"
 APP = "mystarry-blog-app"
 WEB = "astro-bento-portfolio"
-PORT = 8550
+ENDPOINT = WEB + ":8080"
 MAX_BUNDLE_BYTES = 512 * 1024 * 1024
 MAX_SITE_BYTES = 1024 * 1024 * 1024
 MAX_IMAGE_BYTES = 4 * 1024 * 1024 * 1024
@@ -396,15 +396,13 @@ class Publisher:
             if not (self.root / name).is_file():
                 raise DeployError("server deployment configuration is incomplete")
         values = read_env(self.root / ".env")
-        if values.get("PORT", "8550") != "8550":
-            raise DeployError("server port must remain 8550")
         nginx = values.get("NGINX_IMAGE", "nginx:1.25-alpine")
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._/@:-]{0,255}", nginx):
             raise DeployError("invalid trusted nginx image")
         current = self.root / "current"
         if not current.is_symlink() or not current.resolve().is_relative_to((self.root / "releases").resolve()) or not current.resolve().is_dir():
             raise DeployError("server current release is invalid")
-        return {"status": "ready", "port": PORT}
+        return {"status": "ready", "endpoint": ENDPOINT}
 
     def other_containers(self):
         ids = self.command("docker", "ps", "-aq").split()
@@ -450,9 +448,9 @@ class Publisher:
                 time.sleep(min(3, max(0, deadline - time.monotonic())))
         self.command("docker", "exec", WEB, "nginx", "-t")
         for path in ("/", "/projects/", "/api/guestbook?page=1", "/healthz"):
-            self.command("curl", "--fail", "--silent", "--show-error", "--max-time", "5", "http://127.0.0.1:8550" + path, timeout=10)
+            self.command("docker", "exec", WEB, "wget", "-q", "-T", "5", "-O", "-", "http://127.0.0.1:8080" + path, timeout=10)
         if commit:
-            revision = read_json(self.command("curl", "--fail", "--silent", "--show-error", "--max-time", "5", "http://127.0.0.1:8550/deployment.json", timeout=10))
+            revision = read_json(self.command("docker", "exec", WEB, "wget", "-q", "-T", "5", "-O", "-", "http://127.0.0.1:8080/deployment.json", timeout=10))
             if not isinstance(revision, dict) or revision.get("commit") != commit:
                 raise DeployError("served release revision mismatch")
 
@@ -516,7 +514,7 @@ class Publisher:
                 atomic_write(record_path, json.dumps(record) + "\n")
                 raise DeployError("deployment failed; rollback " + record["rollback"]) from exc
             atomic_write(record_path, json.dumps(record) + "\n")
-            return {"status": "succeeded", "commit": commit, "port": PORT}
+            return {"status": "succeeded", "commit": commit, "endpoint": ENDPOINT}
 
 
 def main(argv=None, source=None):

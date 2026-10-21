@@ -1,0 +1,36 @@
+# HTTPS domain migration implementation plan
+
+> **For agentic workers:** Use subagent-driven-development for the repository task, with spec and quality review. The controller performs sequential server maintenance and live acceptance.
+
+**Goal:** Serve the portfolio at https://xingchenli.top/, redirect www and HTTP to that origin, remove host port 8550 after HTTPS acceptance, preserve other projects and persistent data.
+
+**Architecture:** The existing awards-nginx owns 80/443. Add a separate included virtual host under its existing read-only certificate mount, preserving all original virtual hosts. Connect only portfolio web to external backend_awards-net with alias mystarry-web; use Docker DNS resolution at request time so future releases work after container replacement. Keep app on its private default network. Certificates remain outside Git and release artifacts.
+
+**Tech Stack:** Nginx, Docker Compose v1, Astro Node, SQLite, GitHub Actions, Python.
+
+## Task 1: Repository changes
+
+- [x] Add a regression test that Publisher.healthy probes `/`, `/projects/`, `/api/guestbook?page=1`, `/healthz`, and `/deployment.json` inside web with `docker exec astro-bento-portfolio wget -q -T 5 -O - http://127.0.0.1:8080...`, with no curl/8550 dependency. Confirm wrong commit still fails and rollback tests pass. Run the new test RED first.
+- [x] Replace host curl probes with those container probes; remove legacy port constraint/result metadata and report internal endpoint `container:8080` instead. Update subprocess fake to simulate wget responses.
+- [x] Remove web ports from deployment/docker-compose.yml; add web networks default plus edge alias mystarry-web, and external edge network name backend_awards-net. No app network changes.
+- [x] Update internal nginx.conf: trust only 172.18.0.4 (verified existing edge Nginx) for X-Real-IP, derive HTTPS only from trusted edge peer using `$realip_remote_addr`, overwrite the app client-IP and scheme headers. Untrusted peers cannot spoof scheme/IP. Remove static preview noindex; keep guestbook/admin/API noindex.
+- [x] Add deployment/nginx-https.conf with HTTP xingchenli.top/www redirects to https://xingchenli.top$request_uri; HTTPS www redirect; apex HTTPS proxy via `resolver 127.0.0.11 valid=10s ipv6=off; set $portfolio_upstream mystarry-web:8080; proxy_pass http://$portfolio_upstream;`. Set Host and X-Forwarded-Host to apex, X-Real-IP/X-Forwarded-For to remote_addr, X-Forwarded-Proto to https; clear incoming X-Portfolio-Client-IP. Use `/etc/letsencrypt/manual/xingchenli.top/fullchain.pem` and privkey.pem, TLS1.2/1.3. No HSTS preload.
+- [x] Update deployment README/STATUS with HTTPS origin, removed port, shared edge network, source trust IP, real certificate storage, internal health commands and renewal procedure. Avoid claiming live verification before controller acceptance. Run full Python/Node tests and diff checks. Commit on codex/https-domain; no push until controller finishes server preflight.
+
+Repository verification: probe regression observed RED on host curl/8550; GREEN with 72 Python and 82 Node tests passing. Local nginx:1.25-alpine `nginx -t`, Compose model checks (no ports, external edge alias, private app network), and `git diff --check` passed. Live acceptance remains with the controller below.
+
+## Task 2: Server staging and HTTPS acceptance
+
+- [ ] Verify local certificate SAN/key match/dates, DNS A/AAAA. Snapshot all other container IDs/StartedAt, original nginx/certificate hashes, guestbook row/session hashes, app secrets excluding intended PUBLIC_SITE_URL change. Backup SQLite with backup-guestbook.mjs and integrity check; backup all changed infrastructure files under mode0700.
+- [ ] Upload only fullchain.pem and private key through pinned existing SSH; stage mode0700, private key mode0600. Install in `/home/lxc/awards/certs/manual/xingchenli.top/`, visible read-only to awards-nginx. Add an include line to existing nginx.conf in place to preserve bind mount inode. Test nginx -t before graceful reload; retain backups for restore.
+- [ ] Stage a temporary server Compose with the final edge networks and original 8550 mapping. Install internal nginx config and tested publisher; change only PUBLIC_SITE_URL in .app.env to https://xingchenli.top/ and recreate only app/web. Compose attaches web to the shared network without a separate manual connect.
+- [ ] Set GitHub PUBLIC_SITE_URL to HTTPS and local ignored build env likewise. After repository reviews, merge tested branch to master and push while the temporary server Compose still preserves 8550. Wait for Actions and verify the HTTPS-built image and deployed SHA. Astro compiles session Secure and security.allowedDomains from the build origin, so runtime env changes alone are insufficient.
+- [ ] Validate HTTPS with normal CA/hostname validation from desktop and server: apex home/projects/detail/guestbook/API/health, HTTP and www redirects, certificate identity. Validate same-origin writes, Secure cookies and rejection of foreign Origin without logging secrets; clean only task-generated acceptance entries through authorized admin API.
+- [ ] If HTTPS acceptance fails, restore changed configs/environment, reload existing edge and own services only; retain old 8550 until accepted.
+
+## Task 3: Close old port and finish
+
+- [ ] Only after HTTPS acceptance, install no-ports compose and tested publisher.py; validate config and recreate own web. Confirm no host listener or Docker published binding on8550 and public connection fails. Check internal publisher health and domain still work.
+- [ ] Confirm the HTTPS-built deployment remains healthy after port removal and that canonical/sitemap use the HTTPS origin. Publisher preservation guard remains in effect.
+- [ ] Compare snapshots: every preexisting guestbook/reaction/limit row/session preserved; other containers unchanged; original nginx bytes retained as prefix with only new include; existing certificate unchanged and existing public endpoints retain baseline status/content.
+- [ ] Generate new homepage QR PNG/SVG targeting HTTPS and decode-verify. Browser-check HTTPS without bypassing certificate validation and save screenshot. Document final facts and rollback paths; remove task staging files without touching certificates or data.

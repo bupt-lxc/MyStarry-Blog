@@ -1,37 +1,16 @@
-# 部署记录
+# HTTPS 迁移记录
 
-部署完成日期：2026-10-20（北京时间）。
+2026-10-21：仓库配置迁移至 `https://xingchenli.top/`；服务器切换与公网验收由部署流程另行记录，本文件此时不声明上线已完成。
 
-- 公网入口：http://81.70.231.92:8550/
-- 服务器目录：`/home/ubuntu/astro-bento-portfolio`
-- 容器：`astro-bento-portfolio`
-- Compose 项目：`astro-bento`
-- 当前发布：`20261020-221658`
-- 上游版本：`69973cc685960b94bf0f73fd00e9d150f744965b`
-- 端口映射：`0.0.0.0:8550 → 8080`
-- 自动重启：`unless-stopped`
-- 健康状态：`healthy`
-- 实测内存：约 3.3 MiB，上限 64 MiB
+- HTTP 与 www 统一跳转到 HTTPS 主域名。
+- 现有 awards-nginx 提供 TLS，保留其他站点配置；证书位于 `/home/lxc/awards/certs/manual/xingchenli.top/`，沿用已有只读挂载。
+- 本项目目录 `/home/ubuntu/astro-bento-portfolio`，Compose 项目 `astro-bento`。
+- web 容器 astro-bento-portfolio 连接默认网络与 backend_awards-net，别名 mystarry-web；最终配置不发布宿主机端口。
+- app 容器 mystarry-blog-app 只连接默认网络；SQLite、限流、会话和运行密钥继续持久保存在原目录。
+- 内部 Nginx 仅信任边缘地址 `172.18.0.4`，边缘容器重建时需重新核验。
+- 发布器从 web 容器内请求 `127.0.0.1:8080` 验证页面、API、健康与提交身份，保留数据库备份及失败回滚检查。
+- 静态页面解除预览 noindex；留言板、后台和 API 保持 noindex。
 
-## 验收结果
+切换顺序：临时服务器 Compose 保留旧 8550 入口与共享网络，安装新版发布器并统一构建及运行期 HTTPS 地址，完成仓库审查后发布 HTTPS 构建。Astro 的会话 Secure 和允许域名来自构建期，不能仅更新运行环境。HTTPS 验收通过后才安装无端口 Compose 并确认旧入口关闭。最终验收需核对证书、同源写入、Secure Cookie、页面 canonical/sitemap、新部署提交，以及原数据与其他容器保持不变。
 
-- `pnpm build`：19 个页面构建成功。
-- `pnpm check`：0 错误、0 警告、2 个已有代码提示。
-- 构建文件中 104 个站内链接和资源引用通过检查。
-- 公网 19 个 HTML 页面、79 项静态资源及元数据检查通过。
-- `/healthz` 返回 `ok`。
-- 浏览器首页渲染、博客跳转正常，无浏览器错误日志。
-- `/.env` 返回 403，未知页面返回 404，未启用的留言板 API 返回 503。
-- 现有项目容器 ID 和启动时间均未变化。
-- 原 Nginx 配置 SHA256 保持一致，配置校验通过。
-- 原有 8530、5340、8000 项目和 `hkicfest.com` HTTPS 首页均返回 200。
-- 临时的 8090 服务监听已撤下。
-
-## 当前版本说明
-
-这是模板预览部署，尚未替换作者的示例资料、头像、作品和社交账号。
-博客页面可访问，仓库当前没有文章。数据库留言板暂不启用。
-预览响应带 `X-Robots-Tag: noindex, nofollow`，正式上线前应完成个人资料替换并更新该设置。
-SSH 凭据保留在本地工作区 `.env` 中，未进入上传包。
-
-维护与绑定正式域名的说明见同目录 `README.md`。
+配置安装、内部健康检查、续期与回滚步骤见同目录 `README.md`。

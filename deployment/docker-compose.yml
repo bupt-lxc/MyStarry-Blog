@@ -44,8 +44,11 @@ services:
     depends_on:
       app:
         condition: service_started
-    ports:
-      - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-8550}:8080"
+    networks:
+      default:
+      edge:
+        aliases:
+          - mystarry-web
     volumes:
       - ./current:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -70,3 +73,8 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+
+networks:
+  edge:
+    external:
+      name: backend_awards-net

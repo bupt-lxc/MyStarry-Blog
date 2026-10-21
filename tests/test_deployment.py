@@ -82,7 +82,7 @@ class ArchiveTests(unittest.TestCase):
         class InputMustNotBeRead:
             def read(self, *args):
                 raise AssertionError("check read deployment stream")
-        with patch.object(p.Publisher, "check", return_value={"status": "ready", "port": 8550}), patch("builtins.print"):
+        with patch.object(p.Publisher, "check", return_value={"status": "ready", "endpoint": "astro-bento-portfolio:8080"}), patch("builtins.print"):
             self.assertEqual(p.main(["check"], source=InputMustNotBeRead()), 0)
 
     def test_bundle_consumes_input_and_verifies_digest(self):
@@ -192,7 +192,7 @@ class FakeDocker:
         if args[0] == "docker-compose" and "up" in args and args[-1] == "app":
             values = p.read_env(self.root / ".env")
             self.active_image = values["PORTFOLIO_IMAGE"]
-        if args[0] == "curl":
+        if args[:4] == ["docker", "exec", p.WEB, "wget"]:
             if self.failure and "/deployment.json" in args[-1]:
                 return json.dumps({"commit": "wrong"})
             return json.dumps({"commit": SHA})
@@ -208,12 +208,35 @@ class RolloutTests(unittest.TestCase):
         old_site = root / "releases/old/site"
         old_site.mkdir(parents=True)
         (root / "current").symlink_to(old_site, target_is_directory=True)
-        (root / ".env").write_text("PORT=8550\nNGINX_IMAGE=nginx:trusted\nPORTFOLIO_IMAGE=mystarry-blog:" + SHA + "\nKEEP=this\n")
+        (root / ".env").write_text("NGINX_IMAGE=nginx:trusted\nPORTFOLIO_IMAGE=mystarry-blog:" + SHA + "\nKEEP=this\n")
         (root / ".app.env").write_text("secret never changed")
         for config in ["docker-compose.yml", "nginx.conf", "nginx-main.conf"]:
             (root / config).write_text("trusted server configuration")
         bundle = archive([regular("site.tar.gz", site()), regular("image.tar.gz", image())], False)
         return old_site, bundle
+
+    def test_health_probes_run_inside_web_without_host_port(self):
+        with tempfile.TemporaryDirectory() as temp:
+            runner = FakeDocker(Path(temp))
+            p.Publisher(root=temp, run=runner, health_timeout=0).healthy(SHA)
+            probes = [["docker", "exec", p.WEB, "wget", "-q", "-T", "5", "-O", "-",
+                       "http://127.0.0.1:8080" + path]
+                      for path in ("/", "/projects/", "/api/guestbook?page=1", "/healthz", "/deployment.json")]
+            self.assertEqual(runner.commands[3:], probes)
+
+    def test_health_rejects_wrong_served_commit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            runner = FakeDocker(Path(temp), failure=True)
+            with self.assertRaisesRegex(p.DeployError, "served release revision mismatch"):
+                p.Publisher(root=temp, run=runner, health_timeout=0).healthy(SHA)
+
+    def test_check_reports_internal_endpoint_without_legacy_port_constraint(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.fixture(root)
+            (root / ".env").write_text("PORT=1234\nNGINX_IMAGE=nginx:trusted\n")
+            self.assertEqual(p.Publisher(root=root).check(),
+                             {"status": "ready", "endpoint": "astro-bento-portfolio:8080"})
 
     def test_success_switches_static_and_only_own_services_with_consistent_backup(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -224,6 +247,8 @@ class RolloutTests(unittest.TestCase):
             publisher = p.Publisher(root=root, run=runner, health_timeout=0)
             result = publisher.deploy(SHA, hashlib.sha256(bundle).hexdigest(), io.BytesIO(bundle))
             self.assertEqual(result["status"], "succeeded")
+            self.assertEqual(result["endpoint"], "astro-bento-portfolio:8080")
+            self.assertNotIn("port", result)
             self.assertNotEqual((root / "current").resolve(), old_site)
             self.assertEqual(json.loads((root / "current/deployment.json").read_text())["commit"], SHA)
             self.assertEqual((root / "data/guestbook.db").read_bytes(), before_db)
