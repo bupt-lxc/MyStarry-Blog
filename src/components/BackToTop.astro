@@ -1,0 +1,72 @@
+<button
+  type="button"
+  data-back-to-top
+  class="back-to-top"
+  aria-label="返回顶部"
+  title="返回顶部"
+  hidden
+  tabindex="-1"
+>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="m6 12 6-6 6 6M12 6v13"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"></path>
+  </svg>
+</button>
+
+<style>
+  .back-to-top {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--darkslate-400);
+    border-radius: 50%;
+    background: var(--darkslate-500);
+    color: var(--darkslate-100);
+    box-shadow: 0 4px 12px #0005;
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      color 160ms ease;
+  }
+  .back-to-top[hidden] {
+    display: none;
+  }
+  .back-to-top:hover {
+    border-color: var(--primary-500);
+    color: var(--primary-400);
+  }
+  .back-to-top:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 4px;
+  }
+  :global(.style-neon) .back-to-top {
+    background: rgba(2, 4, 8, 0.9);
+    border-color: var(--primary-500);
+    color: var(--primary-400);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--primary-500) 30%, transparent);
+  }
+  :global(.style-glass) .back-to-top {
+    background: rgba(12, 20, 40, 0.5);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-color: color-mix(in srgb, var(--primary-500) 14%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .back-to-top {
+      transition: none;
+    }
+  }
+</style>

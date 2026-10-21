@@ -6,6 +6,7 @@ import { Font } from "astro:assets";
 import { SITE } from "../site-config";
 import GridTransition from "../components/GridTransition.astro";
 import StylePanel from "../components/StylePanel.astro";
+import BackToTop from "../components/BackToTop.astro";
 import { BUTTON_FRAME, cssVars } from "../lib/nine-slice";
 import { appearanceBootstrap } from "../lib/appearance";
 interface Props {
@@ -124,30 +125,37 @@ const schema =
     <script is:inline set:html={appearanceBootstrap} />
     <GridTransition />
     <slot />
-    {
-      !hideSoundToggle && (
-        <div class="fixed bottom-4 right-4 md:bottom-6 z-50 flex flex-col items-center gap-2">
-          <StylePanel />
-          <button
-            id="sound-toggle"
-            aria-label="关闭音效"
-            title="关闭音效"
-            aria-pressed="true"
-            class="chrome--ns w-9 h-9 flex items-center justify-center rounded-lg bg-darkslate-500 border border-darkslate-400 hover:border-primary-500 transition-all duration-200 text-white shadow-lg"
-          >
-            <Icon id="sound-icon-on" name="pixel-sound-on" class="w-4 h-4" />
-            <Icon
-              id="sound-icon-off"
-              name="pixel-sound-off"
-              class="w-4 h-4 hidden"
-            />
-          </button>
-        </div>
-      )
-    }
+    <div
+      class="fixed bottom-4 right-4 md:bottom-6 z-50 w-9 flex flex-col items-center gap-2"
+    >
+      <BackToTop />
+      {
+        !hideSoundToggle && (
+          <>
+            <StylePanel />
+            <button
+              id="sound-toggle"
+              aria-label="关闭音效"
+              title="关闭音效"
+              aria-pressed="true"
+              class="chrome--ns w-9 h-9 flex items-center justify-center rounded-lg bg-darkslate-500 border border-darkslate-400 hover:border-primary-500 transition-all duration-200 text-white shadow-lg"
+            >
+              <Icon id="sound-icon-on" name="pixel-sound-on" class="w-4 h-4" />
+              <Icon
+                id="sound-icon-off"
+                name="pixel-sound-off"
+                class="w-4 h-4 hidden"
+              />
+            </button>
+          </>
+        )
+      }
+    </div>
   </body>
 </html>
 <script>
+  import { navigate } from "astro:transitions/client";
+  import { initScrollNavigation } from "../lib/scroll-navigation";
   import { initNineSliceFallback } from "../lib/nine-slice-fallback";
   import { CARD_HOVER, play } from "../lib/sound";
   import { applyAppearance } from "../lib/appearance";
@@ -157,6 +165,7 @@ const schema =
     normalizePathname,
   } from "../lib/nav-path";
   let disposeNineSlice: (() => void) | null = null;
+  let disposeScrollNavigation: (() => void) | null = null;
   let soundEnabled = true;
   const playCardHover = () => play(CARD_HOVER);
   function updateToggleIcon() {
@@ -173,6 +182,8 @@ const schema =
   }
   document.addEventListener("astro:page-load", () => {
     applyAppearance();
+    disposeScrollNavigation?.();
+    disposeScrollNavigation = initScrollNavigation(navigate);
     try {
       soundEnabled = localStorage.getItem("soundEnabled") !== "false";
     } catch {
@@ -202,6 +213,8 @@ const schema =
     } catch {}
   });
   document.addEventListener("astro:before-swap", (event) => {
+    disposeScrollNavigation?.();
+    disposeScrollNavigation = null;
     const next = (event as unknown as { newDocument: Document }).newDocument;
     applyAppearance(next.body);
     disposeNineSlice?.();
