@@ -75,7 +75,21 @@ curl -fsS https://xingchenli.top/
 
 **替换或重建 awards-nginx 前，重新核验其在 `backend_awards-net` 的地址，并同步本项目 nginx.conf。不要扩大为信任整个 `172.18.0.0/16`。**
 
-迁移期间先用包含共享网络和原 8550 映射的临时服务器 Compose。Astro 的会话 Secure 设置与 security.allowedDomains 由构建期地址生成，因此仅更改运行环境不足以完成切换：先安装新版发布器，统一构建与运行期 HTTPS 地址，完成仓库审查后发布 HTTPS 构建，发布过程仍保留旧端口。验证 HTTPS 页面、API 同源写入、Secure Cookie 与外站 Origin 拒绝通过后，才安装仓库最终无端口 Compose，重建本项目 web 并验证旧端口已无监听和 Docker 绑定。失败则恢复本次配置与站点地址，保留旧入口直至验收通过。
+迁移期间先用包含共享网络和原 8550 映射的临时服务器 Compose。Astro 的会话 Secure 设置与 security.allowedDomains 由构建期地址生成，因此仅更改运行环境不足以完成切换：先安装新版发布器，统一构建与运行期 HTTPS 地址，完成仓库审查后发布 HTTPS 构建，发布过程仍保留旧端口。验证 HTTPS 页面、API 同源写入、Secure Cookie 与外站 Origin 拒绝通过后，才安装仓库最终无端口 Compose，重建本项目 web 并验证旧端口已无监听和 Docker 绑定。失败按下方完整迁移回滚处理，保留旧入口直至验收通过。
+
+### HTTPS 迁移回滚
+
+启用前，将已解析的 current 静态目录绝对路径与 `docker inspect mystarry-blog-app` 的 `.Image` 字段（不可变镜像 ID，`sha256:...`）保存为本次服务器私有备份目录中的 `rollback-release.json`，并保留该旧目录与镜像。备份同时包含原 Compose、内部 Nginx、`.env`、`.app.env`、可信发布器与边缘 Nginx 配置；另记录原 GitHub Variable 和本地构建环境的 PUBLIC_SITE_URL。备份目录权限 700、记录文件 600，不打印运行密钥。
+
+HTTPS 构建即使已成功发布，之后验收失败仍需恢复旧构建。先暂停自动发布并等待正在执行的发布结束，在部署根目录的 `.publisher.lock` 上取得独占锁，然后按以下步骤恢复：
+
+1. 核实保存的 current 目标仍是本项目 releases 内的现存目录，且保存的不可变镜像 ID 仍可被 Docker 检查到。恢复原 Compose、内部 Nginx、`.env`、`.app.env` 与可信发布器；将 PORTFOLIO_IMAGE 显式设为保存的镜像 ID，原子切换 current 到保存的旧目录。这样同时恢复旧静态页面、旧允许域名、旧 Cookie 设置和运行期站点地址。
+2. 在原边缘配置文件上原位写回备份，保留已有 bind mount inode；运行 awards-nginx 的 nginx -t，通过后 graceful reload。只按原 Compose 的 stop/rm/up 重建本项目 app/web，确认旧 8550 入口和旧版本恢复，其他项目不重建。
+3. 在允许后续自动发布前，恢复原 GitHub Variable 与本地构建环境中的 PUBLIC_SITE_URL，避免下一次发布重新引入 HTTPS 构建。保留回滚记录、现有数据库、WAL/SHM、限流和会话；本次迁移回滚不恢复 SQLite 备份。
+
+本次工作区已有一次性辅助程序：从仓库父目录运行 `python .deploy/https_ops.py rollback`。执行前同样要阻止新自动发布并等待当前发布结束；程序在 publisher 锁内恢复服务，再恢复 GitHub 和本地站点地址。它依赖此前 capture-rollback 保存的本地状态与服务器私有备份，受 Git 忽略且不随仓库分发；其他环境应按上述手动步骤恢复，不能依赖该文件存在。回滚后复查旧页面/API、部署提交身份与其他项目状态，不能只凭旧健康地址返回 200 判断恢复完成。
+
+### 证书续期
 
 证书为手动安装，当前配置不提供自动续期。到期前向签发机构续签，核验 SAN 覆盖 apex 和 www、证书与私钥匹配且日期正确。备份现有文件，将新 fullchain.pem 与 privkey.pem 安装到上述宿主机目录（目录 700、私钥 600），保持路径不变；运行边缘 nginx -t 后 graceful reload，再以正常 CA 与主机名验证检查两个 HTTPS 域名及跳转。失败时恢复文件并重新校验。仅更新证书不重启 app/web，不修改 SQLite 或其他项目证书。当前未配置 HSTS preload。
 
